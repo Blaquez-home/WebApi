@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="AutoExpandEdmModel.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using Microsoft.OData.Edm;
 using Microsoft.Test.E2E.AspNet.OData.Common.Execution;
@@ -21,6 +25,11 @@ namespace Microsoft.Test.E2E.AspNet.OData.AutoExpand
             builder.EntityType<DerivedOrder2>();
             builder.EntitySet<OrderDetail>("OrderDetails");
             builder.EntitySet<People>("People");
+            builder.EntitySet<Menu>("EnableQueryMenus");
+            builder.EntitySet<Menu>("QueryOptionsOfTMenus");
+            builder.EntitySet<Tab>("Tabs");
+            builder.EntitySet<Item>("Items");
+            builder.EntitySet<Note>("Notes");
             IEdmModel model = builder.GetEdmModel();
             return model;
         }

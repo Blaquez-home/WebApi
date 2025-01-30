@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="UnbufferedODataBatchHandler.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -43,54 +47,56 @@ namespace Microsoft.AspNet.OData.Batch
             // This container is for the overall batch request.
             IServiceProvider requestContainer = request.CreateRequestContainer(ODataRouteName);
             requestContainer.GetRequiredService<ODataMessageReaderSettings>().BaseUri = GetBaseUri(request);
-
-            ODataMessageReader reader = await request.Content.GetODataMessageReaderAsync(requestContainer, cancellationToken);
-            request.RegisterForDispose(reader);
-
-            ODataBatchReader batchReader = await reader.CreateODataBatchReaderAsync();
             List<ODataBatchResponseItem> responses = new List<ODataBatchResponseItem>();
-            Guid batchId = Guid.NewGuid();
 
-            HttpConfiguration configuration = request.GetConfiguration();
-            bool enableContinueOnErrorHeader = (configuration != null)
-                ? configuration.HasEnabledContinueOnErrorHeader()
-                : false;
-
-            SetContinueOnError(new WebApiRequestHeaders(request.Headers), enableContinueOnErrorHeader);
-
-            try
+            using (ODataMessageReader reader = await request.Content.GetODataMessageReaderAsync(requestContainer, cancellationToken))
             {
-                while (await batchReader.ReadAsync())
+                request.RegisterForDispose(reader);
+
+                ODataBatchReader batchReader = await reader.CreateODataBatchReaderAsync();
+                Guid batchId = Guid.NewGuid();
+
+                HttpConfiguration configuration = request.GetConfiguration();
+                bool enableContinueOnErrorHeader = (configuration != null)
+                    ? configuration.HasEnabledContinueOnErrorHeader()
+                    : false;
+
+                SetContinueOnError(new WebApiRequestHeaders(request.Headers), enableContinueOnErrorHeader);
+
+                try
                 {
-                    ODataBatchResponseItem responseItem = null;
-                    if (batchReader.State == ODataBatchReaderState.ChangesetStart)
+                    while (await batchReader.ReadAsync())
                     {
-                        responseItem = await ExecuteChangeSetAsync(batchReader, batchId, request, cancellationToken);
-                    }
-                    else if (batchReader.State == ODataBatchReaderState.Operation)
-                    {
-                        responseItem = await ExecuteOperationAsync(batchReader, batchId, request, cancellationToken);
-                    }
-                    if (responseItem != null)
-                    {
-                        responses.Add(responseItem);
-                        if (responseItem.IsResponseSuccessful() == false && ContinueOnError == false)
+                        ODataBatchResponseItem responseItem = null;
+                        if (batchReader.State == ODataBatchReaderState.ChangesetStart)
                         {
-                            break;
+                            responseItem = await ExecuteChangeSetAsync(batchReader, batchId, request, cancellationToken);
+                        }
+                        else if (batchReader.State == ODataBatchReaderState.Operation)
+                        {
+                            responseItem = await ExecuteOperationAsync(batchReader, batchId, request, cancellationToken);
+                        }
+                        if (responseItem != null)
+                        {
+                            responses.Add(responseItem);
+                            if (responseItem.IsResponseSuccessful() == false && ContinueOnError == false)
+                            {
+                                break;
+                            }
                         }
                     }
                 }
-            }
-            catch
-            {
-                foreach (ODataBatchResponseItem response in responses)
+                catch
                 {
-                    if (response != null)
+                    foreach (ODataBatchResponseItem response in responses)
                     {
-                        response.Dispose();
+                        if (response != null)
+                        {
+                            response.Dispose();
+                        }
                     }
+                    throw;
                 }
-                throw;
             }
 
             return await CreateResponseMessageAsync(responses, request, cancellationToken);
@@ -121,6 +127,8 @@ namespace Microsoft.AspNet.OData.Batch
             operationRequest.CopyBatchRequestProperties(originalRequest);
             operationRequest.DeleteRequestContainer(false);
             OperationRequestItem operation = new OperationRequestItem(operationRequest);
+            operation.ContentIdToLocationMapping = originalRequest.GetODataContentIdMapping();
+
             try
             {
                 ODataBatchResponseItem response = await operation.SendRequestAsync(Invoker, cancellationToken);
@@ -154,7 +162,8 @@ namespace Microsoft.AspNet.OData.Batch
 
             Guid changeSetId = Guid.NewGuid();
             List<HttpResponseMessage> changeSetResponse = new List<HttpResponseMessage>();
-            Dictionary<string, string> contentIdToLocationMapping = new Dictionary<string, string>();
+            IDictionary<string, string> contentIdToLocationMapping = originalRequest.GetODataContentIdMapping();
+
             try
             {
                 while (await batchReader.ReadAsync() && batchReader.State != ODataBatchReaderState.ChangesetEnd)

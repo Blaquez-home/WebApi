@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="ODataBatchHttpRequestMessageExtensions.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -160,12 +164,13 @@ namespace Microsoft.AspNet.OData.Batch
             }
 
             object contentIdMapping;
-            if (request.Properties.TryGetValue(ContentIdMappingKey, out contentIdMapping))
+            if (!request.Properties.TryGetValue(ContentIdMappingKey, out contentIdMapping))
             {
-                return contentIdMapping as IDictionary<string, string>;
+                contentIdMapping = new Dictionary<string, string>();
+                request.Properties.Add(new KeyValuePair<string, object>(ContentIdMappingKey, contentIdMapping));
             }
 
-            return null;
+            return contentIdMapping as IDictionary<string, string>;
         }
 
         /// <summary>

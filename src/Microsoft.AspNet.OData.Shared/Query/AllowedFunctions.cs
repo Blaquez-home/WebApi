@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="AllowedFunctions.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 
@@ -147,9 +151,14 @@ namespace Microsoft.AspNet.OData.Query
         All = 0x10000000,
 
         /// <summary>
+        /// A value that corresponds to allowing 'MatchesPattern' function in $filter.
+        /// </summary>
+        MatchesPattern = 0x20000000,
+
+        /// <summary>
         /// A value that corresponds to allowing all string related functions in $filter.
         /// </summary>
-        AllStringFunctions = StartsWith | EndsWith | Contains | Length | IndexOf | Concat | Substring | ToLower | ToUpper | Trim,
+        AllStringFunctions = StartsWith | EndsWith | Contains | Length | IndexOf | Concat | Substring | ToLower | ToUpper | Trim | MatchesPattern,
 
         /// <summary>
         /// A value that corresponds to allowing all datetime related functions in $filter.

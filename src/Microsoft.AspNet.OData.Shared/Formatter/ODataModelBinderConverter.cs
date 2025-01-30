@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="ODataModelBinderConverter.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections;
@@ -31,7 +35,9 @@ namespace Microsoft.AspNet.OData.Formatter
     public static class ODataModelBinderConverter
     {
         private static readonly MethodInfo EnumTryParseMethod = typeof(Enum).GetMethods()
-            .Single(m => m.Name == "TryParse" && m.GetParameters().Length == 2);
+            .Single(m => m.Name.Equals("TryParse", StringComparison.Ordinal)
+                && m.GetParameters().Length == 2
+                && m.GetParameters()[0].ParameterType.Equals(typeof(string)));
 
         private static readonly MethodInfo CastMethodInfo = typeof(Enumerable).GetMethod("Cast");
 
@@ -226,6 +232,7 @@ namespace Microsoft.AspNet.OData.Formatter
 
             IWebApiRequestMessage request = readContext.InternalRequest;
             ODataMessageReaderSettings oDataReaderSettings = request.ReaderSettings;
+            oDataReaderSettings.EnablePropertyNameCaseInsensitive = !readContext.DisableCaseInsensitiveRequestPropertyBinding;
 
             using (MemoryStream stream = new MemoryStream(Encoding.UTF8.GetBytes(valueString)))
             {
@@ -331,7 +338,7 @@ namespace Microsoft.AspNet.OData.Formatter
             if (edmTypeReference.IsEntity())
             {
                 IEdmEntityTypeReference entityType = edmTypeReference.AsEntity();
-                return CovertResourceId(value, topLevelResource.Resource, entityType, readContext);
+                return CovertResourceId(value, topLevelResource.ResourceBase, entityType, readContext);
             }
 
             return value;
@@ -344,14 +351,14 @@ namespace Microsoft.AspNet.OData.Formatter
             int i = 0;
             foreach (object item in sources)
             {
-                object newItem = CovertResourceId(item, resourceSet.Resources[i].Resource, entityTypeReference,
+                object newItem = CovertResourceId(item, resourceSet.Resources[i].ResourceBase, entityTypeReference,
                     readContext);
                 i++;
                 yield return newItem;
             }
         }
 
-        private static object CovertResourceId(object source, ODataResource resource,
+        private static object CovertResourceId(object source, ODataResourceBase resource,
             IEdmEntityTypeReference entityTypeReference, ODataDeserializerContext readContext)
         {
             Contract.Assert(resource != null);

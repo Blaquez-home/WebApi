@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="HttpRequestExtensions.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -450,6 +454,21 @@ namespace Microsoft.AspNet.OData.Extensions
                     requestScope.Dispose();
                 }
             }
+        }
+
+        /// <summary>
+        /// Gets the <see cref="IExpandQueryBuilder"/> from the request container.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <returns>The <see cref="IExpandQueryBuilder"/> from the request container.</returns>
+        public static IExpandQueryBuilder GetExpandQueryBuilder(this HttpRequest request)
+        {
+            if (request == null)
+            {
+                throw Error.ArgumentNull("request");
+            }
+
+            return request.GetRequestContainer().GetRequiredService<IExpandQueryBuilder>();
         }
 
         /// <summary>

@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="ODataValidationSettings.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections.ObjectModel;
@@ -57,7 +61,7 @@ namespace Microsoft.AspNet.OData.Query
         ///
         /// The allowed functions include the following:
         ///
-        /// String related: contains, endswith, startswith, length, indexof, substring, tolower, toupper, trim, concat
+        /// String related: contains, endswith, startswith, length, indexof, substring, tolower, toupper, trim, concat, matchesPattern
         ///
         /// e.g. ~/Customers?$filter=length(CompanyName) eq 19
         ///

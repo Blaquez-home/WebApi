@@ -1,10 +1,15 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="ResourceContext.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Contracts;
+using System.Net.Http;
 using Microsoft.AspNet.OData.Common;
 using Microsoft.AspNet.OData.Formatter;
 using Microsoft.AspNet.OData.Formatter.Deserialization;
@@ -191,6 +196,15 @@ namespace Microsoft.AspNet.OData
             }
 
             object value;
+
+            if (SerializerContext.IsDeltaOfT)
+            {
+                if (ResourceInstance is IDelta delta && delta.TryGetPropertyValue(propertyName, out value))
+                {
+                    return value;
+                }
+            }
+
             if (EdmObject.TryGetPropertyValue(propertyName, out value))
             {
                 return value;

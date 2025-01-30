@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="AggregationController.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -209,4 +213,32 @@ namespace Microsoft.Test.E2E.AspNet.OData.Aggregation
         }
     }
 #endif
+
+    public class EmployeesController : TestODataController
+    {
+        private static readonly List<Employee> employees = new List<Employee>
+        {
+            new Employee
+            {
+                Id = 1,
+                NextOfKin = new NextOfKin { Name = "NoK 1", PhysicalAddress = new Location { City = "Redmond" } }
+            },
+            new Employee
+            {
+                Id = 2,
+                NextOfKin = new NextOfKin { Name = "NoK 2", PhysicalAddress = new Location { City = "Nairobi" } }
+            },
+            new Employee
+            {
+                Id = 3,
+                NextOfKin = new NextOfKin { Name = "NoK 3", PhysicalAddress = new Location { City = "Redmond" } }
+            }
+        };
+
+        [EnableQuery]
+        public IQueryable<Employee> Get()
+        {
+            return employees.AsQueryable();
+        }
+    }
 }

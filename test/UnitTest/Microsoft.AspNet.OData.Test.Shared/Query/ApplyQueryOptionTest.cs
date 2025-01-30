@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="ApplyQueryOptionTest.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -1271,9 +1275,9 @@ namespace Microsoft.AspNet.OData.Test.Query
             var options = new ODataQueryOptions(context, request);
 
             IEnumerable<Customer> customers = CustomerApplyTestData;
+
             // Act
             IQueryable queryable = options.ApplyTo(customers.AsQueryable(), new ODataQuerySettings { HandleNullPropagation = HandleNullPropagationOption.True });
-
 
             // Assert
             Assert.NotNull(queryable);

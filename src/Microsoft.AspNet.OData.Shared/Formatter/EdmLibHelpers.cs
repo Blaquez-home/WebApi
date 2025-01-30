@@ -1,7 +1,12 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="EdmLibHelpers.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 #if NETFX // System.Data.Linq.Binary is only supported in the AspNet version.
 using System.Data.Linq;
@@ -130,13 +135,25 @@ namespace Microsoft.AspNet.OData.Formatter
             {
                 if (testCollections)
                 {
+                    Type entityType;
+
+                    if (IsDeltaSetWrapper(clrType, out entityType))
+                    {
+                        IEdmType elementType = GetEdmType(edmModel, entityType, testCollections: false);
+
+                        if (elementType != null)
+                        {
+                            return new EdmCollectionType(elementType.ToEdmTypeReference(IsNullable(entityType)));
+                        }
+                    }
+
                     Type enumerableOfT = ExtractGenericInterface(clrType, typeof(IEnumerable<>));
+
                     if (enumerableOfT != null)
                     {
                         Type elementClrType = enumerableOfT.GetGenericArguments()[0];
 
-                        // IEnumerable<SelectExpandWrapper<T>> is a collection of T.
-                        Type entityType;
+                        // IEnumerable<SelectExpandWrapper<T>> is a collection of T.                       
                         if (IsSelectExpandWrapper(elementClrType, out entityType))
                         {
                             elementClrType = entityType;
@@ -274,17 +291,20 @@ namespace Microsoft.AspNet.OData.Formatter
             }
 
             string typeName = edmSchemaType.FullName();
-            IEnumerable<Type> matchingTypes = GetMatchingTypes(typeName, assembliesResolver);
 
-            if (matchingTypes.Count() > 1)
+            // Calling "ToList()" to avoid multiple enumerates.
+            IList<Type> matchingTypes = GetMatchingTypes(typeName, assembliesResolver).ToList();
+
+            if (matchingTypes.Count > 1)
             {
                 throw Error.Argument("edmTypeReference", SRResources.MultipleMatchingClrTypesForEdmType,
-                    typeName, String.Join(",", matchingTypes.Select(type => type.AssemblyQualifiedName)));
+                    typeName, String.Join(",", matchingTypes.Select(t => t.AssemblyQualifiedName)));
             }
 
-            edmModel.SetAnnotationValue<ClrTypeAnnotation>(edmSchemaType, new ClrTypeAnnotation(matchingTypes.SingleOrDefault()));
+            Type clrType = matchingTypes.Count == 0 ? null : matchingTypes[0];
+            edmModel.SetAnnotationValue(edmSchemaType, new ClrTypeAnnotation(clrType));
 
-            return matchingTypes.SingleOrDefault();
+            return clrType;
         }
 
         public static bool IsNotFilterable(IEdmProperty edmProperty, IEdmProperty pathEdmProperty,
@@ -569,6 +589,43 @@ namespace Microsoft.AspNet.OData.Formatter
             return false;
         }
 
+        public static ModelBoundQuerySettings GetModelBoundQuerySettingsOrNull(this IEdmModel edmModel, IEdmStructuredType structuredType, IEdmProperty property)
+        {
+            if (edmModel == null)
+            {
+                throw Error.ArgumentNull(nameof(edmModel));
+            }
+
+            ModelBoundQuerySettings querySettingsOnType = null;
+            if (structuredType != null)
+            {
+                querySettingsOnType = edmModel.GetAnnotationValue<ModelBoundQuerySettings>(structuredType);
+            }
+
+            if (property == null)
+            {
+                return querySettingsOnType;
+            }
+
+            ModelBoundQuerySettings querySettingsOnProperty = edmModel.GetAnnotationValue<ModelBoundQuerySettings>(property);
+            if (querySettingsOnProperty == null)
+            {
+                return querySettingsOnType;
+            }
+            else
+            {
+                if (querySettingsOnType == null)
+                {
+                    return querySettingsOnProperty;
+                }
+                else
+                {
+                    // Settings on property is higher priority than the ones on type.
+                    return GetMergedPropertyQuerySettings(querySettingsOnProperty, querySettingsOnType);
+                }
+            }
+        }
+
         public static ModelBoundQuerySettings GetModelBoundQuerySettings(IEdmProperty property,
             IEdmStructuredType structuredType, IEdmModel edmModel, DefaultQuerySettings defaultQuerySettings = null)
         {
@@ -625,20 +682,24 @@ namespace Microsoft.AspNet.OData.Formatter
             return edmTypeReference.Definition;
         }
 
-        public static void GetPropertyAndStructuredTypeFromPath(IEnumerable<ODataPathSegment> segments,
-            out IEdmProperty property, out IEdmStructuredType structuredType, out string name)
+        public static void GetPropertyAndStructuredTypeFromPath(
+            IEnumerable<ODataPathSegment> segments,
+            out IEdmProperty property,
+            out IEdmStructuredType structuredType,
+            out string name)
         {
             property = null;
             structuredType = null;
-            name = String.Empty;
-            string typeCast = String.Empty;
+            name = string.Empty;
+
             if (segments != null)
             {
+                string typeCast = string.Empty;
+
                 IEnumerable<ODataPathSegment> reverseSegments = segments.Reverse();
-                foreach (var segment in reverseSegments)
+                foreach (ODataPathSegment segment in reverseSegments)
                 {
-                    NavigationPropertySegment navigationPathSegment = segment as NavigationPropertySegment;
-                    if (navigationPathSegment != null)
+                    if (segment is NavigationPropertySegment navigationPathSegment)
                     {
                         property = navigationPathSegment.NavigationProperty;
                         if (structuredType == null)
@@ -650,31 +711,41 @@ namespace Microsoft.AspNet.OData.Formatter
                         return;
                     }
 
-                    PropertySegment propertyAccessPathSegment = segment as PropertySegment;
-                    if (propertyAccessPathSegment != null)
+                    if (segment is OperationSegment operationSegment)
+                    {
+                        if (structuredType == null)
+                        {
+                            structuredType = operationSegment.EdmType as IEdmStructuredType;
+                        }
+
+                        name = operationSegment.Operations.First().FullName() + typeCast;
+                        return;
+                    }
+
+                    if (segment is PropertySegment propertyAccessPathSegment)
                     {
                         property = propertyAccessPathSegment.Property;
                         if (structuredType == null)
                         {
                             structuredType = GetElementType(property.Type) as IEdmStructuredType;
                         }
+
                         name = property.Name + typeCast;
                         return;
                     }
 
-                    EntitySetSegment entitySetSegment = segment as EntitySetSegment;
-                    if (entitySetSegment != null)
+                    if (segment is EntitySetSegment entitySetSegment)
                     {
                         if (structuredType == null)
                         {
                             structuredType = entitySetSegment.EntitySet.EntityType();
                         }
+
                         name = entitySetSegment.EntitySet.Name + typeCast;
                         return;
                     }
 
-                    TypeSegment typeSegment = segment as TypeSegment;
-                    if (typeSegment != null)
+                    if (segment is TypeSegment typeSegment)
                     {
                         structuredType = GetElementType(typeSegment.EdmType.ToEdmTypeReference(false)) as IEdmStructuredType;
                         typeCast = "/" + structuredType;
@@ -735,7 +806,7 @@ namespace Microsoft.AspNet.OData.Formatter
             if (edmModel == null)
             {
                 throw Error.ArgumentNull("edmModel");
-            }         
+            }
 
             DynamicPropertyDictionaryAnnotation annotation =
                 edmModel.GetAnnotationValue<DynamicPropertyDictionaryAnnotation>(edmType);
@@ -891,6 +962,27 @@ namespace Microsoft.AspNet.OData.Formatter
         }
 
         /// <summary>
+        /// Get element type reference if it's collection or return itself
+        /// </summary>
+        /// <param name="typeReference">The test type reference.</param>
+        /// <returns>Element type or itself.</returns>
+        public static IEdmTypeReference GetElementTypeOrSelf(this IEdmTypeReference typeReference)
+        {
+            if (typeReference == null)
+            {
+                return typeReference;
+            }
+
+            if (typeReference.TypeKind() == EdmTypeKind.Collection)
+            {
+                IEdmCollectionTypeReference collectType = typeReference.AsCollection();
+                return collectType.ElementType();
+            }
+
+            return typeReference;
+        }
+
+        /// <summary>
         /// Get the expected payload type of an OData path.
         /// </summary>
         /// <param name="type">The Type to use.</param>
@@ -901,14 +993,18 @@ namespace Microsoft.AspNet.OData.Formatter
         {
             IEdmTypeReference expectedPayloadType = null;
 
-            if (typeof(IEdmObject).IsAssignableFrom(type))
+            if (typeof(IEdmObject).IsAssignableFrom(type) || typeof(IDeltaSet).IsAssignableFrom(type))
             {
                 // typeless mode. figure out the expected payload type from the OData Path.
                 IEdmType edmType = path.EdmType;
+
                 if (edmType != null)
                 {
                     expectedPayloadType = EdmLibHelpers.ToEdmTypeReference(edmType, isNullable: false);
-                    if (expectedPayloadType.TypeKind() == EdmTypeKind.Collection)
+
+                    // This logic should execute only if its not a type of EdmChangedObjectCollection. In case of EdmChangedObjectCollection,
+                    // expectedPayloadType should not be of element type, but of collection.
+                    if (expectedPayloadType.TypeKind() == EdmTypeKind.Collection && !(typeof(ICollection).IsAssignableFrom(type) || typeof(IDeltaSet).IsAssignableFrom(type)))
                     {
                         IEdmTypeReference elementType = expectedPayloadType.AsCollection().ElementType();
                         if (elementType.IsEntity())
@@ -1026,7 +1122,7 @@ namespace Microsoft.AspNet.OData.Formatter
             }
         }
 
-        private static QueryableRestrictionsAnnotation GetPropertyRestrictions(IEdmProperty edmProperty,
+        internal static QueryableRestrictionsAnnotation GetPropertyRestrictions(IEdmProperty edmProperty,
             IEdmModel edmModel)
         {
             Contract.Assert(edmProperty != null);
@@ -1041,6 +1137,8 @@ namespace Microsoft.AspNet.OData.Formatter
         }
 
         private static bool IsSelectExpandWrapper(Type type, out Type entityType) => IsTypeWrapper(typeof(SelectExpandWrapper<>), type, out entityType);
+
+        private static bool IsDeltaSetWrapper(Type type, out Type entityType) => IsTypeWrapper(typeof(DeltaSet<>), type, out entityType);
 
         internal static bool IsComputeWrapper(Type type, out Type entityType) => IsTypeWrapper(typeof(ComputeWrapper<>), type, out entityType);
 

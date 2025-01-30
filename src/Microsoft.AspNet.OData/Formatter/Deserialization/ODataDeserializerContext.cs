@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="ODataDeserializerContext.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System.Net.Http;
 using System.Web.Http.Controllers;
@@ -32,7 +36,7 @@ namespace Microsoft.AspNet.OData.Formatter.Deserialization
 
                 // We add this setting via CompatibilityOptions
                 CompatibilityOptions options = webApiRequestMessage != null ? webApiRequestMessage.Configuration.GetCompatibilityOptions() : CompatibilityOptions.None;
-                DisableCaseInsensitiveRequestPropertyBinding = options.HasFlag(CompatibilityOptions.DisableCaseInsensitiveRequestPropertyBinding) ? true : false;
+                DisableCaseInsensitiveRequestPropertyBinding = options.HasOption(CompatibilityOptions.DisableCaseInsensitiveRequestPropertyBinding);
             }
         }
 

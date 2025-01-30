@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="SelectExpandBinderTest.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections;
@@ -173,12 +177,7 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
 
             // Assert
             SelectExpandWrapper<QueryOrder> projectedOrder = Expression.Lambda(projection).Compile().DynamicInvoke() as SelectExpandWrapper<QueryOrder>;
-            Assert.NotNull(projectedOrder);
-            Assert.Null(projectedOrder.Instance);
-
-            SelectExpandWrapper<QueryCustomer> projectCustomer = projectedOrder.Container.ToDictionary(PropertyMapper)["Customer"] as SelectExpandWrapper<QueryCustomer>;
-            Assert.NotNull(projectCustomer);
-            Assert.Null(projectCustomer.Instance);
+            Assert.Null(projectedOrder);
         }
 
         [Fact]
@@ -288,6 +287,42 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
             SelectExpandWrapper<QueryCustomer> projectCustomer = projectedOrder.Container.ToDictionary(PropertyMapper)["Customer"] as SelectExpandWrapper<QueryCustomer>;
             Assert.NotNull(projectCustomer);
             Assert.Null(projectCustomer.Instance);
+        }
+
+        [Fact]
+        public void ProjectAsWrapper_Collection_TopOnNullExpand()
+        {
+            // Arrange
+            _settings.HandleNullPropagation = HandleNullPropagationOption.True;
+
+            IEdmEntityType vipCustomer = _model.SchemaElements.OfType<IEdmEntityType>().First(c => c.Name == nameof(QueryVipCustomer));
+            IEdmNavigationProperty specialOrdersNav = vipCustomer.DeclaredNavigationProperties().Single(c => c.Name == nameof(QueryVipCustomer.SpecialOrders));
+            ExpandedNavigationSelectItem expandItem = new ExpandedNavigationSelectItem(
+                new ODataExpandPath(new NavigationPropertySegment(specialOrdersNav, navigationSource: _orders)),
+                _orders,
+                selectAndExpand: null,
+                filterOption: null,
+                orderByOption: null,
+                topOption: 10,
+                skipOption: null,
+                countOption: null,
+                searchOption: null,
+                levelsOption: null);
+            SelectExpandClause selectExpand = new SelectExpandClause(new SelectItem[] { expandItem }, allSelected: true);
+
+            QueryVipCustomer customer = new QueryVipCustomer();
+            Expression source = Expression.Constant(customer);
+
+            // Act
+            Expression projection = _binder.ProjectAsWrapper(source, selectExpand, vipCustomer, _customers);
+
+            // Assert
+            object rawProjectionResult = Expression.Lambda(projection).Compile().DynamicInvoke();
+            Assert.NotNull(rawProjectionResult);
+            SelectExpandWrapper<QueryVipCustomer> projectedCustomer = rawProjectionResult as SelectExpandWrapper<QueryVipCustomer>;
+            Assert.NotNull(projectedCustomer);
+            Assert.True(projectedCustomer.TryGetPropertyValue(nameof(QueryVipCustomer.SpecialOrders), out object rawSpecialOrders));
+            Assert.Null(rawSpecialOrders);
         }
 
         [Fact]
@@ -860,6 +895,67 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
             var fourth = sortedOrders[3];
             Assert.Equal(987, fourth.Customer.Id);
             Assert.Equal(4, fourth.Id);
+        }
+
+        [Theory]
+        [InlineData("Orders($filter=Customer/HomeAddress/Cities/any(e:e/CityName eq 1001))", new[] { "QueryOrder1" })]
+        [InlineData("Orders($filter=Customer/HomeAddress/Cities/any(e:e/CityName eq 1002))", new[] { "QueryOrder1", "QueryOrder3" })]
+        [InlineData("Orders($filter=Customer/HomeAddress/Cities/any(e:e/CityName eq 1003))", new[] { "QueryOrder2", "QueryOrder3" })]
+        public void ProjectAsWrapper_Element_ExpandAndFilterByAny(string expand, object expected)
+        {
+            // Arrange
+            // Customer?$expand=Orders($filter=Customer/HomeAddress/Cities/any(e:e/CityName eq 1001))
+            // Customer?$expand=Orders($filter=Customer/HomeAddress/Cities/any(e:e/CityName eq 1002))
+            // Customer?$expand=Orders($filter=Customer/HomeAddress/Cities/any(e:e/CityName eq 1003))
+
+            var city1 = new QueryCity() { Id = 1, CityName = 1001 };
+            var city2 = new QueryCity() { Id = 2, CityName = 1002 };
+            var city3 = new QueryCity() { Id = 3, CityName = 1003 };
+            var city4 = new QueryCity() { Id = 4, CityName = 1004 };
+
+            QueryCustomer customer1 = new QueryCustomer
+            {
+                HomeAddress = new QueryAddress
+                {
+                    Cities = new List<QueryCity>() { city1, city2 }
+                }
+            };
+
+            QueryCustomer customer2 = new QueryCustomer
+            {
+                HomeAddress = new QueryAddress
+                {
+                    Cities = new List<QueryCity>() { city3, city4 }
+                }
+            };
+
+            QueryCustomer customer3 = new QueryCustomer
+            {
+                HomeAddress = new QueryAddress
+                {
+                    Cities = new List<QueryCity>() { city2, city3 }
+                }
+            };
+
+            var orders = new List<QueryOrder>
+            {
+               new QueryOrder{ Title = "QueryOrder1", Customer = customer1  },
+               new QueryOrder{ Title = "QueryOrder2", Customer = customer2  },
+               new QueryOrder{ Title = "QueryOrder3", Customer = customer3  },
+            };
+
+            Expression source = Expression.Constant(new QueryCustomer() { Orders = orders });
+            SelectExpandClause selectExpandClause = ParseSelectExpand(null, expand, _model, _customer, _customers);
+            Assert.NotNull(selectExpandClause);
+
+            // Act
+            Expression projection = _binder.ProjectAsWrapper(source, selectExpandClause, _customer, _customers);
+
+            // Assert
+            var customerWrappers = Expression.Lambda(projection).Compile().DynamicInvoke() as SelectExpandWrapper<QueryCustomer>;
+            var orderWrappers = customerWrappers.Container.ToDictionary(PropertyMapper)["Orders"] as IEnumerable<SelectExpandWrapper<QueryOrder>>;
+            var orderTitleList = orderWrappers.Select(s => s.Instance.Title).ToList();
+            Assert.Equal(expected, orderTitleList);
         }
 
         [Fact]
@@ -1816,6 +1912,66 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
             Assert.True(expand.ToString().Contains("ToList") == enableOptimization);
         }
 
+        [Fact]
+        public void CreatePropertyValueExpression_DerivedNavigationPropertyRedeclared_ReturnsMemberAccessExpression()
+        {
+            var modelBuilder = new ODataConventionModelBuilder();
+            modelBuilder.EntitySet<QueryPolygon>("Shapes");
+            var model = modelBuilder.GetEdmModel();
+
+            var settings = new ODataQuerySettings { HandleNullPropagation = HandleNullPropagationOption.False };
+            var context = new ODataQueryContext(model, typeof(QueryPolygon)) { RequestContainer = new MockContainer() };
+            var binder = new SelectExpandBinder(settings, context);
+
+            var queryPolygonEntityType = model.SchemaElements.OfType<IEdmEntityType>().First(c => c.Name == "QueryPolygon");
+            var querySubCategoryEntityType = model.SchemaElements.OfType<IEdmEntityType>().First(c => c.Name == "QuerySubCategory");
+
+            // Arrange
+            Expression source = Expression.Constant(new QueryPolygon());
+
+            var propertyName = "Category";
+            IEdmNavigationProperty navProperty = queryPolygonEntityType.NavigationProperties().Single(c => c.Name == propertyName);
+            Assert.NotNull(navProperty);
+
+            // Act
+            Expression propertyValue = binder.CreatePropertyValueExpression(querySubCategoryEntityType, navProperty, source, null);
+
+            // Assert
+            Assert.Equal(ExpressionType.MemberAccess, propertyValue.NodeType);
+            Assert.Equal(TypeHelper.GetProperty(typeof(QueryPolygon), propertyName), (propertyValue as MemberExpression).Member);
+            Assert.Equal(String.Format("({0} As QueryPolygon).{1}", source.ToString(), propertyName), propertyValue.ToString());
+        }
+
+        [Fact]
+        public void CreatePropertyValueExpression_DerivedNavigationPropertyRedeclaredInSubType_ReturnsMemberAccessExpression()
+        {
+            var modelBuilder = new ODataConventionModelBuilder();
+            modelBuilder.EntitySet<QueryPentagon>("Shapes");
+            var model = modelBuilder.GetEdmModel();
+
+            var settings = new ODataQuerySettings { HandleNullPropagation = HandleNullPropagationOption.False };
+            var context = new ODataQueryContext(model, typeof(QueryPentagon)) { RequestContainer = new MockContainer() };
+            var binder = new SelectExpandBinder(settings, context);
+
+            var queryPentagonEntityType = model.SchemaElements.OfType<IEdmEntityType>().First(c => c.Name == "QueryPentagon");
+            var querySubCategoryEntityType = model.SchemaElements.OfType<IEdmEntityType>().First(c => c.Name == "QuerySubCategory");
+
+            // Arrange
+            Expression source = Expression.Constant(new QueryPentagon());
+
+            var propertyName = "Category";
+            IEdmNavigationProperty navProperty = queryPentagonEntityType.NavigationProperties().Single(c => c.Name == propertyName);
+            Assert.NotNull(navProperty);
+
+            // Act
+            Expression propertyValue = binder.CreatePropertyValueExpression(querySubCategoryEntityType, navProperty, source, null);
+
+            // Assert
+            Assert.Equal(ExpressionType.MemberAccess, propertyValue.NodeType);
+            Assert.Equal(TypeHelper.GetProperty(typeof(QueryPentagon), propertyName), (propertyValue as MemberExpression).Member);
+            Assert.Equal(String.Format("({0} As QueryPentagon).{1}", source.ToString(), propertyName), propertyValue.ToString());
+        }
+
         public static IEdmModel GetEdmModel()
         {
             var builder = new ODataConventionModelBuilder();
@@ -1960,5 +2116,31 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
         Green,
 
         Blue
+    }
+
+    public class QueryShape
+    {
+        public int Id { get; set; }
+        public QueryCategory Category { get; set; }
+    }
+
+    public class QueryPolygon : QueryShape
+    {
+        public new int Id { get; set; }
+        public new QuerySubCategory Category { get; set; }
+    }
+
+    public class QueryPentagon : QueryPolygon
+    {
+
+    }
+
+    public class QueryCategory
+    {
+        public int Id { get; set; }
+    }
+
+    public class QuerySubCategory : QueryCategory
+    {
     }
 }

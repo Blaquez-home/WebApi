@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="ODataResourceSetSerializer.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections;
@@ -477,26 +481,12 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
         private static Uri GetNestedNextPageLink(ODataSerializerContext writeContext, int pageSize, object obj)
         {
             Contract.Assert(writeContext.ExpandedResource != null);
-            Uri navigationLink = null;
             IEdmNavigationSource sourceNavigationSource = writeContext.ExpandedResource.NavigationSource;
             NavigationSourceLinkBuilderAnnotation linkBuilder = writeContext.Model.GetNavigationSourceLinkBuilder(sourceNavigationSource);
 
-            // In Contained Navigation, we don't have navigation property binding,
-            // Hence we cannot get the NavigationLink from the NavigationLinkBuilder
-            if (writeContext.NavigationSource.NavigationSourceKind() == EdmNavigationSourceKind.ContainedEntitySet)
-            {
-                // Contained navigation.
-                Uri idlink = linkBuilder.BuildIdLink(writeContext.ExpandedResource);
-
-                var link = idlink.ToString() + "/" + writeContext.NavigationProperty.Name;
-                navigationLink = new Uri(link);
-            }
-            else
-            {
-                // Non-Contained navigation.
-                navigationLink =
-                    linkBuilder.BuildNavigationLink(writeContext.ExpandedResource, writeContext.NavigationProperty);
-            }
+            Uri navigationLink = linkBuilder.BuildNavigationLink(
+                writeContext.ExpandedResource,
+                writeContext.NavigationProperty);
 
             Uri nestedNextLink = GenerateQueryFromExpandedItem(writeContext, navigationLink);
 

@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="ClrTypeCache.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections.Concurrent;
@@ -67,8 +71,13 @@ namespace Microsoft.AspNet.OData.Formatter
 
             public int GetHashCode(EdmTypeCacheItem obj)
             {
-                string combined = $"{obj.EdmType.FullTypeName()}~{obj.Nullable}";
-                return combined.GetHashCode();
+                unchecked
+                {
+                    int hashCode = 17;
+                    hashCode = (hashCode * 31) + obj.EdmType.GetHashCode();
+                    hashCode = (hashCode * 31) + obj.Nullable.GetHashCode();
+                    return hashCode;
+                }
             }
         }
     }

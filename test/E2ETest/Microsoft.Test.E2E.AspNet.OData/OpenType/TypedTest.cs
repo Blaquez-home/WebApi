@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="TypedTest.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -36,7 +40,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.OpenType
         string expectedValueOfString, actualValueOfString;
 
         public TypedOpenTypeTest(WebHostTestFixture fixture)
-            :base(fixture)
+            : base(fixture)
         {
         }
 
@@ -417,6 +421,53 @@ namespace Microsoft.Test.E2E.AspNet.OData.OpenType
                 request = new HttpRequestMessage(new HttpMethod("PATCH"), requestUri);
                 request.Content = new StringContent(
                     @"{
+                        '@odata.type':'#Microsoft.Test.E2E.AspNet.OData.OpenType.GlobalAddress',
+                        'City':'NewCity',
+                        'OtherProperty@odata.type':'#Date',
+                        'OtherProperty':'2016-02-01'
+                  }");
+                request.Content.Headers.ContentType = MediaTypeHeaderValue.Parse("application/json");
+
+                response = await this.Client.SendAsync(request);
+                Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+                // Get ~/Accounts(1)/Address
+                request = new HttpRequestMessage(HttpMethod.Get, requestUri);
+                response = await Client.SendAsync(request);
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                content = await response.Content.ReadAsObject<JObject>();
+                Assert.Equal(7, content.Count); // @odata.context + 3 declared properties + 2 dynamic properties + 1 new dynamic properties
+                Assert.Equal("NewCity", content["City"]); // updated
+                Assert.Equal("1 Microsoft Way", content["Street"]);
+                Assert.Equal("US", content["CountryCode"]);
+                Assert.Equal("US", content["CountryOrRegion"]);
+                Assert.Equal("2016-02-01", content["OtherProperty"]);
+            }
+        }
+
+        [Fact]
+        public async Task PatchOpenComplexTypeProperty_WithDifferentType()
+        {
+            foreach (string routing in Routings)
+            {
+                await ResetDatasource();
+
+                // Get ~/Accounts(1)/Address
+                var requestUri = string.Format(BaseAddress + "/{0}/Accounts(1)/Address", routing);
+                var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
+                var response = await Client.SendAsync(request);
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                var content = await response.Content.ReadAsObject<JObject>();
+                Assert.Equal(5, content.Count); // @odata.context + 3 declared properties + 1 dynamic properties
+                Assert.Equal("Redmond", content["City"]);
+                Assert.Equal("1 Microsoft Way", content["Street"]);
+                Assert.Equal("US", content["CountryCode"]);
+                Assert.Equal("US", content["CountryOrRegion"]); // dynamic property
+
+                // Patch ~/Accounts(1)/Address
+                request = new HttpRequestMessage(new HttpMethod("PATCH"), requestUri);
+                request.Content = new StringContent(
+                    @"{
                         '@odata.type':'#Microsoft.Test.E2E.AspNet.OData.OpenType.Address',
                         'City':'NewCity',
                         'OtherProperty@odata.type':'#Date',
@@ -432,10 +483,10 @@ namespace Microsoft.Test.E2E.AspNet.OData.OpenType
                 response = await Client.SendAsync(request);
                 Assert.Equal(HttpStatusCode.OK, response.StatusCode);
                 content = await response.Content.ReadAsObject<JObject>();
-                Assert.Equal(6, content.Count); // @odata.context + 3 declared properties + 1 dynamic properties + 1 new dynamic properties
+                Assert.Equal(6, content.Count); // @odata.context + 3 declared properties + 1 dynamic properties + 1 new dynamic properties.
                 Assert.Equal("NewCity", content["City"]); // updated
                 Assert.Equal("1 Microsoft Way", content["Street"]);
-                Assert.Equal("US", content["CountryCode"]);
+
                 Assert.Equal("US", content["CountryOrRegion"]);
                 Assert.Equal("2016-02-01", content["OtherProperty"]);
             }
@@ -525,7 +576,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.OpenType
                 response = await Client.SendAsync(request);
                 Assert.Equal(HttpStatusCode.OK, response.StatusCode);
                 content = await response.Content.ReadAsObject<JObject>();
-                Assert.Equal(5, content.Count); // @odata.context + 3 declared properties + 1 new dynamic properties
+                Assert.Equal(6, content.Count); // @odata.context + 3 declared properties + 2 new dynamic properties
                 Assert.Equal("NewCity", content["City"]); // updated
                 Assert.Equal("NewStreet", content["Street"]); // updated
                 Assert.Equal("US", content["CountryCode"]);
@@ -537,6 +588,35 @@ namespace Microsoft.Test.E2E.AspNet.OData.OpenType
         #endregion
 
         #region Insert
+
+        [Fact]
+        public async Task InsertEntityWithOpenCaseInsensitiveProperty()
+        {
+            foreach (string routing in Routings)
+            {
+                await ResetDatasource();
+
+                var postUri = string.Format(this.BaseAddress + "/{0}/Accounts", routing);
+
+                var postContent = JObject.Parse(
+@"{
+    'Id':4,
+    'naMe':null
+}");
+                using (HttpResponseMessage response = await this.Client.PostAsJsonAsync(postUri, postContent))
+                {
+                    Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+                    var json = await response.Content.ReadAsObject<JObject>();
+
+                    var id = (int)json["Id"];
+                    Assert.Equal(4, id);
+
+                    var name = (string)json["Name"];
+                    Assert.Null(name);
+                }
+            }
+        }
 
         [Fact]
         public async Task InsertEntityWithOpenComplexTypeProperty()

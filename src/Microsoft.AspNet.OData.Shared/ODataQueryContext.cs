@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="ODataQueryContext.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -151,6 +155,11 @@ namespace Microsoft.AspNet.OData
         internal IEdmStructuredType TargetStructuredType { get; private set; }
 
         internal string TargetName { get; private set; }
+
+        /// <summary>
+        /// Gets or sets the query validation settings.
+        /// </summary>
+        internal ODataValidationSettings ValidationSettings { get; set; }
 
         private static IEdmNavigationSource GetNavigationSource(IEdmModel model, IEdmType elementType, ODataPath odataPath)
         {

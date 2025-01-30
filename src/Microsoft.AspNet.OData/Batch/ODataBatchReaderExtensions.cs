@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="ODataBatchReaderExtensions.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -10,6 +14,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNet.OData.Common;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OData;
 
 namespace Microsoft.AspNet.OData.Batch
@@ -151,7 +156,15 @@ namespace Microsoft.AspNet.OData.Batch
             ODataBatchOperationRequestMessage batchRequest = await reader.CreateOperationRequestMessageAsync();
             HttpRequestMessage request = new HttpRequestMessage();
             request.Method = new HttpMethod(batchRequest.Method);
-            request.RequestUri = batchRequest.Url;
+            Uri requestUri = batchRequest.Url;
+
+            if (!requestUri.IsAbsoluteUri)
+            {
+                Uri baseUri = batchRequest.Container.GetRequiredService<ODataMessageReaderSettings>().BaseUri;
+                requestUri = new Uri(baseUri, requestUri);
+            }
+
+            request.RequestUri = requestUri;
 
             if (bufferContentStream)
             {

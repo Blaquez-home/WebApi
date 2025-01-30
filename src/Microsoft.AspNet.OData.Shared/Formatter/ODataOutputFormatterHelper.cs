@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="ODataOutputFormatterHelper.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -91,7 +95,8 @@ namespace Microsoft.AspNet.OData.Formatter
             ODataPayloadKind? payloadKind;
 
             Type elementType;
-            if (typeof(IEdmObject).IsAssignableFrom(type) ||
+            if (typeof(IEdmObject).IsAssignableFrom(type) || 
+                typeof(IDeltaSet).IsAssignableFrom(type) || 
                 (TypeHelper.IsCollection(type, out elementType) && typeof(IEdmObject).IsAssignableFrom(elementType)))
             {
                 payloadKind = GetEdmObjectPayloadKind(type, internalRequest);
@@ -152,7 +157,17 @@ namespace Microsoft.AspNet.OData.Formatter
 
             ODataMessageWriterSettings writerSettings = internalRequest.WriterSettings;
             writerSettings.BaseUri = baseAddress;
-            writerSettings.Version = version;
+
+            // Set the response version to v4.01 when the request is a delta patch, but not any time we write a delta response payload.
+            if (serializer.ODataPayloadKind == ODataPayloadKind.Delta && internalRequest.Method == ODataRequestMethod.Patch)
+            {
+                writerSettings.Version = ODataVersion.V401;
+            }
+            else
+            {
+                writerSettings.Version = version;
+            }
+
             writerSettings.Validations = writerSettings.Validations & ~ValidationKinds.ThrowOnUndeclaredPropertyForNonOpenType;
 
             string metadataLink = internaUrlHelper.CreateODataLink(MetadataSegment.Instance);
@@ -203,6 +218,7 @@ namespace Microsoft.AspNet.OData.Formatter
                 writeContext.Path = path;
                 writeContext.MetadataLevel = metadataLevel;
                 writeContext.QueryOptions = internalRequest.Context.QueryOptions;
+                writeContext.Type = type;
 
                 //Set the SelectExpandClause on the context if it was explicitly specified.
                 if (selectExpandDifferentFromQueryOptions != null)
@@ -247,7 +263,7 @@ namespace Microsoft.AspNet.OData.Formatter
                 {
                     return ODataPayloadKind.ResourceSet;
                 }
-                else if (typeof(IEdmChangedObject).IsAssignableFrom(elementType))
+                else if (typeof(IDeltaSetItem).IsAssignableFrom(elementType) || typeof(IEdmChangedObject).IsAssignableFrom(elementType))
                 {
                     return ODataPayloadKind.Delta;
                 }

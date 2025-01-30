@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="OpenTypeControllers.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -52,7 +56,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.OpenType
         }
 
         [EnableQuery]
-        public ITestActionResult Post([FromBody]Employee employee)
+        public ITestActionResult Post([FromBody] Employee employee)
         {
             employee.Id = Employees.Count + 1;
             Employees.Add(employee);
@@ -60,7 +64,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.OpenType
         }
 
         [EnableQuery]
-        public ITestActionResult Put(int key, [FromBody]Employee employee)
+        public ITestActionResult Put(int key, [FromBody] Employee employee)
         {
             Employee originalEmployee = Employees.Single(e => e.Id == key);
             employee.Id = key;
@@ -70,7 +74,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.OpenType
         }
 
         [EnableQuery]
-        public ITestActionResult Patch(int key, [FromBody]Delta<Employee> employee)
+        public ITestActionResult Patch(int key, [FromBody] Delta<Employee> employee)
         {
             Employee originalEmployee = Employees.Single(e => e.Id == key);
             employee.Patch(originalEmployee);
@@ -94,7 +98,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.OpenType
         }
 
         [EnableQuery]
-        public ITestActionResult PutManager(int key, [FromBody]Manager employee)
+        public ITestActionResult PutManager(int key, [FromBody] Manager employee)
         {
             Manager originalEmployee = Employees.OfType<Manager>().Single(e => e.Id == key);
             employee.Id = key;
@@ -105,7 +109,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.OpenType
         }
 
         [EnableQuery]
-        public ITestActionResult PatchManager(int key, [FromBody]Delta<Manager> employee)
+        public ITestActionResult PatchManager(int key, [FromBody] Delta<Manager> employee)
         {
             Manager originalEmployee = Employees.OfType<Manager>().Single(e => e.Id == key);
             employee.Patch(originalEmployee);
@@ -139,7 +143,6 @@ namespace Microsoft.Test.E2E.AspNet.OData.OpenType
         {
             Accounts = new List<Account>
             {
-               
                 new PremiumAccount()
                 {
                     Id = 1,
@@ -179,7 +182,6 @@ namespace Microsoft.Test.E2E.AspNet.OData.OpenType
                     AccountInfo = new AccountInfo()
                     {
                         NickName = "NickName3"
-                        
                     },
                     Address = new Address()
                     {
@@ -338,7 +340,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.OpenType
         }
 
         [HttpPatch]
-        public ITestActionResult Patch(int key, [FromBody]Delta<Account> patch, ODataQueryOptions<Account> queryOptions)
+        public ITestActionResult Patch(int key, [FromBody] Delta<Account> patch, ODataQueryOptions<Account> queryOptions)
         {
             IEnumerable<Account> appliedAccounts = Accounts.Where(a => a.Id == key);
 
@@ -365,7 +367,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.OpenType
 
         [HttpPatch]
         [ODataRoute("Accounts({key})")]
-        public ITestActionResult PatchAttributeRouting(int key, [FromBody]Delta<Account> patch, ODataQueryOptions<Account> queryOptions)
+        public ITestActionResult PatchAttributeRouting(int key, [FromBody] Delta<Account> patch, ODataQueryOptions<Account> queryOptions)
         {
             IEnumerable<Account> appliedAccounts = Accounts.Where(a => a.Id == key);
 
@@ -391,7 +393,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.OpenType
         }
 
         [HttpPut]
-        public ITestActionResult Put(int key, [FromBody]Account account)
+        public ITestActionResult Put(int key, [FromBody] Account account)
         {
             if (key != account.Id)
             {
@@ -406,7 +408,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.OpenType
 
         [HttpPut]
         [ODataRoute("Accounts({key})")]
-        public ITestActionResult PutAttributeRouting(int key, [FromBody]Account account)
+        public ITestActionResult PutAttributeRouting(int key, [FromBody] Account account)
         {
             if (key != account.Id)
             {
@@ -420,7 +422,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.OpenType
         }
 
         [HttpPost]
-        public ITestActionResult Post([FromBody]Account account)
+        public ITestActionResult Post([FromBody] Account account)
         {
             account.Id = Accounts.Count + 1;
             account.DynamicProperties["OwnerGender"] = Gender.Male;// Defect 2371564 odata.type is missed in client payload for dynamic enum type
@@ -431,7 +433,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.OpenType
 
         [HttpPost]
         [ODataRoute("Accounts")]
-        public ITestActionResult PostAttributeRouting([FromBody]Account account)
+        public ITestActionResult PostAttributeRouting([FromBody] Account account)
         {
             account.Id = Accounts.Count + 1;
             Accounts.Add(account);
@@ -471,7 +473,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.OpenType
         }
 
         [HttpPatch]
-        public ITestActionResult PatchToAddress(int key, [FromBody]Delta<Address> address)
+        public ITestActionResult PatchToAddress(int key, [FromBody] Delta<Address> address)
         {
             Account account = Accounts.FirstOrDefault(a => a.Id == key);
             if (account == null)
@@ -484,13 +486,14 @@ namespace Microsoft.Test.E2E.AspNet.OData.OpenType
                 account.Address = new Address();
             }
 
-            address.Patch(account.Address);
+            var updatedAddress = address.Patch(account.Address);
+            account.Address = updatedAddress;
 
             return Updated(account);
         }
 
         [HttpPatch]
-        public ITestActionResult PatchToAddressOfGlobalAddress(int key, [FromBody]Delta<GlobalAddress> address)
+        public ITestActionResult PatchToAddressOfGlobalAddress(int key, [FromBody] Delta<GlobalAddress> address)
         {
             Account account = Accounts.FirstOrDefault(a => a.Id == key);
             if (account == null)
@@ -504,12 +507,13 @@ namespace Microsoft.Test.E2E.AspNet.OData.OpenType
             }
 
             GlobalAddress globalAddress = account.Address as GlobalAddress;
-            address.Patch(globalAddress);
+            var gloAdress = address.Patch(globalAddress);
+            account.Address = gloAdress;
             return Updated(account);
         }
 
         [HttpPut]
-        public ITestActionResult PutToAddress(int key, [FromBody]Delta<Address> address)
+        public ITestActionResult PutToAddress(int key, [FromBody] Delta<Address> address)
         {
             Account account = Accounts.FirstOrDefault(a => a.Id == key);
             if (account == null)
@@ -573,7 +577,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.OpenType
 
         [HttpPost]
         [ODataRoute("UpdateAddressAction")]
-        public Address UpdateAddressActionAttributeRouting([FromBody]ODataActionParameters parameters)
+        public Address UpdateAddressActionAttributeRouting([FromBody] ODataActionParameters parameters)
         {
             var id = (int)parameters["ID"];
             var address = parameters["Address"] as Address;
@@ -585,7 +589,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.OpenType
 
         [HttpPost]
         [ODataRoute("Accounts({key})/Microsoft.Test.E2E.AspNet.OData.OpenType.AddShipAddress")]
-        public ITestActionResult AddShipAddress(int key, [FromBody]ODataActionParameters parameters)
+        public ITestActionResult AddShipAddress(int key, [FromBody] ODataActionParameters parameters)
         {
             Account account = Accounts.Single(c => c.Id == key);
             if (account.DynamicProperties["ShipAddresses"] == null)
@@ -627,4 +631,3 @@ namespace Microsoft.Test.E2E.AspNet.OData.OpenType
 
     #endregion
 }
-

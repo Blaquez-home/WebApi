@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="ODataDeserializerContext.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using Microsoft.AspNet.OData.Interfaces;
@@ -14,7 +18,11 @@ namespace Microsoft.AspNet.OData.Formatter.Deserialization
     public partial class ODataDeserializerContext
     {
         private bool? _isDeltaOfT;
+        private bool? _isDeletedDeltaOfT;
         private bool? _isUntyped;
+        private bool? _isChangedObjectCollection;
+        private bool? _isDeltaEntity;
+        private bool? _isDeltaDeletedEntity;
 
         /// <summary>
         /// Gets or sets the type of the top-level object the request needs to be deserialized into.
@@ -58,10 +66,64 @@ namespace Microsoft.AspNet.OData.Formatter.Deserialization
             {
                 if (!_isDeltaOfT.HasValue)
                 {
-                    _isDeltaOfT = ResourceType != null && TypeHelper.IsGenericType(ResourceType) && ResourceType.GetGenericTypeDefinition() == typeof(Delta<>);
+                    _isDeltaOfT = ResourceType != null && TypeHelper.IsGenericType(ResourceType) && (ResourceType.GetGenericTypeDefinition() == typeof(Delta<>) ||
+                        ResourceType.GetGenericTypeDefinition() == typeof(DeltaDeletedEntityObject<>));
                 }
 
                 return _isDeltaOfT.Value;
+            }
+        }
+
+        internal bool IsDeletedDeltaOfT
+        {
+            get
+            {
+                if (!_isDeletedDeltaOfT.HasValue)
+                {
+                    _isDeletedDeltaOfT = ResourceType != null && TypeHelper.IsGenericType(ResourceType) && (ResourceType.GetGenericTypeDefinition() == typeof(DeltaDeletedEntityObject<>));
+                }
+
+                return _isDeletedDeltaOfT.Value;
+            }
+        }
+
+        internal bool IsDeltaEntity
+        {
+            get
+            {
+                if (!_isDeltaEntity.HasValue)
+                {
+                    _isDeltaEntity = ResourceType != null && (ResourceType == typeof(EdmDeltaEntityObject) || ResourceType == typeof(EdmDeltaDeletedEntityObject));
+                }
+
+                return _isDeltaEntity.Value;
+            }
+        }
+
+        internal bool IsDeltaDeletedEntity
+        {
+            get
+            {
+                if (!_isDeltaDeletedEntity.HasValue)
+                {
+                    _isDeltaDeletedEntity = ResourceType != null && ResourceType == typeof(EdmDeltaDeletedEntityObject);
+                }
+
+                return _isDeltaDeletedEntity.Value;
+            }
+        }
+
+        internal bool IsChangedObjectCollection
+        {
+            get
+            {
+                if (!_isChangedObjectCollection.HasValue)
+                {
+                    _isChangedObjectCollection = ResourceType != null && (ResourceType == typeof(EdmChangedObjectCollection) || (TypeHelper.IsGenericType(ResourceType) &&
+                        ResourceType.GetGenericTypeDefinition() == typeof(DeltaSet<>)));
+                }
+
+                return _isChangedObjectCollection.Value;
             }
         }
 
@@ -71,7 +133,7 @@ namespace Microsoft.AspNet.OData.Formatter.Deserialization
             {
                 if (!_isUntyped.HasValue)
                 {
-                    _isUntyped = TypeHelper.IsTypeAssignableFrom(typeof(IEdmObject), ResourceType) ||
+                    _isUntyped = IsChangedObjectCollection ? !TypeHelper.IsGenericType(ResourceType) : (TypeHelper.IsTypeAssignableFrom(typeof(IEdmObject), ResourceType) && !IsDeltaOfT) ||
                         typeof(ODataUntypedActionParameters) == ResourceType;
                 }
 

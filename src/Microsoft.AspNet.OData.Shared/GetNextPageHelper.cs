@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="GetNextPageHelper.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -39,7 +43,7 @@ namespace Microsoft.AspNet.OData
                         if (Int32.TryParse(value, out top))
                         {
                             // We decrease top by the pageSize because that's the number of results we're returning in the current page. If the $top query option's value is less than or equal to the page size, there is no next page.
-                            if ((options & CompatibilityOptions.AllowNextLinkWithNonPositiveTopValue) != 0 || top > pageSize)
+                            if (options.HasOption(CompatibilityOptions.AllowNextLinkWithNonPositiveTopValue) || top > pageSize)
                             {
                                 value = (top - pageSize).ToString(CultureInfo.InvariantCulture);
                             }
@@ -64,6 +68,7 @@ namespace Microsoft.AspNet.OData
                     case "$skiptoken":
                         continue;
                     default:
+                        key = kvp.Key; // Leave parameters that are not OData query options in initial form
                         break;
                 }
 

@@ -3,7 +3,7 @@
     <TargetFrameworks>netcoreapp3.1;netstandard2.0</TargetFrameworks>
   </PropertyGroup>
   <Import Project="..\..\tools\WebStack.settings.targets" />
-  
+
   <PropertyGroup>
     <DocumentationFile>$(OutputPath)$(AssemblyName).xml</DocumentationFile>
     <CodeAnalysisRuleSet>..\Strict.ruleset</CodeAnalysisRuleSet>
@@ -12,19 +12,35 @@
     <!-- Let's generate our own assembly info -->
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
-  
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netcoreapp3.1|AnyCPU'">
+    <TreatWarningsAsErrors>False</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netstandard2.0|AnyCPU'">
+    <TreatWarningsAsErrors>False</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|netcoreapp3.1|AnyCPU'">
+    <TreatWarningsAsErrors>False</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|netstandard2.0|AnyCPU'">
+    <TreatWarningsAsErrors>False</TreatWarningsAsErrors>
+  </PropertyGroup>
+
   <Import Project="..\Microsoft.AspNet.OData.Shared\Microsoft.AspNet.OData.Shared.projitems" Label="Shared" />
 
   <ItemGroup Condition="'$(TargetFramework)' == 'netcoreapp3.1' ">
     <!-- Define the Items for .NET CORE 3.x -->
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0' ">
     <!-- Define the Items for .NET Standard 2.0 -->
     <PackageReference Include="Desktop.Analyzers" Version="1.1.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Core" Version="2.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Core" Version="2.0.1" />
     <!-- PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="1.1.0" /> -->
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="2.0.0" />
     <PackageReference Include="System.Collections.Concurrent" Version="4.3.0" />
@@ -41,9 +57,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.OData.Core" Version="7.9.0" />
-    <PackageReference Include="Microsoft.OData.Edm" Version="7.9.0" />
-    <PackageReference Include="Microsoft.Spatial" Version="7.9.0" />
+    <PackageReference Include="Microsoft.OData.Core" Version="7.20.0" />
+    <PackageReference Include="Microsoft.OData.Edm" Version="7.20.0" />
+    <PackageReference Include="Microsoft.Spatial" Version="7.20.0" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -80,4 +96,15 @@
       <DependentUpon>SRResources.resx</DependentUpon>
     </Compile>
   </ItemGroup>
+  <Target Name="SetNuspecProperties" BeforeTargets="GenerateNuspec">
+    <PropertyGroup>
+      <NuspecProperties>ProductRoot=$(ProductBinPath);VersionNuGetSemantic=$(VersionNuGetSemantic)</NuspecProperties>
+      <NuspecProperties>$(NuspecProperties);NightlyBuildVersion=$(NightlyBuildVersion)</NuspecProperties>
+      <NuspecProperties>$(NuspecProperties);SourcesRoot=$(RootDir)</NuspecProperties>
+      <NuspecProperties>$(NuspecProperties);AspNetCorePackageDependency=$(AspNetCorePackageDependency)</NuspecProperties>
+      <NuspecProperties>$(NuspecProperties);DependencyInjection2PackageDependency=$(DependencyInjection2PackageDependency)</NuspecProperties>
+      <NuspecProperties>$(NuspecProperties);ODataLibPackageDependency=$(ODataLibPackageDependency)</NuspecProperties>
+      <NuspecProperties>$(NuspecProperties);NewtonsoftJsonPackageDependency=$(NewtonsoftJsonPackageDependency)</NuspecProperties>
+    </PropertyGroup>
+  </Target>
 </Project>

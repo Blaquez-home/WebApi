@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="ODataInputFormatterFactory.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System.Collections.Generic;
 using System.Text;
@@ -68,6 +72,31 @@ namespace Microsoft.AspNet.OData.Formatter
             formatter.SupportedMediaTypes.Add(ODataMediaTypes.ApplicationJsonStreamingTrue);
             formatter.SupportedMediaTypes.Add(ODataMediaTypes.ApplicationJsonStreamingFalse);
             formatter.SupportedMediaTypes.Add(ODataMediaTypes.ApplicationJson);
+            // NOTE: The order in which the media types are added is relevant due to how ASP.NET Core handles content negotiation
+            formatter.SupportedMediaTypes.Add(ODataMediaTypes.ApplicationJsonODataMinimalMetadataStreamingTrueIeee754CompatibleFalse);
+            formatter.SupportedMediaTypes.Add(ODataMediaTypes.ApplicationJsonODataMinimalMetadataStreamingTrueIeee754CompatibleTrue);
+            formatter.SupportedMediaTypes.Add(ODataMediaTypes.ApplicationJsonODataMinimalMetadataStreamingFalseIeee754CompatibleFalse);
+            formatter.SupportedMediaTypes.Add(ODataMediaTypes.ApplicationJsonODataMinimalMetadataStreamingFalseIeee754CompatibleTrue);
+            formatter.SupportedMediaTypes.Add(ODataMediaTypes.ApplicationJsonODataMinimalMetadataIeee754CompatibleFalse);
+            formatter.SupportedMediaTypes.Add(ODataMediaTypes.ApplicationJsonODataMinimalMetadataIeee754CompatibleTrue);
+            formatter.SupportedMediaTypes.Add(ODataMediaTypes.ApplicationJsonODataFullMetadataStreamingTrueIeee754CompatibleFalse);
+            formatter.SupportedMediaTypes.Add(ODataMediaTypes.ApplicationJsonODataFullMetadataStreamingTrueIeee754CompatibleTrue);
+            formatter.SupportedMediaTypes.Add(ODataMediaTypes.ApplicationJsonODataFullMetadataStreamingFalseIeee754CompatibleFalse);
+            formatter.SupportedMediaTypes.Add(ODataMediaTypes.ApplicationJsonODataFullMetadataStreamingFalseIeee754CompatibleTrue);
+            formatter.SupportedMediaTypes.Add(ODataMediaTypes.ApplicationJsonODataFullMetadataIeee754CompatibleFalse);
+            formatter.SupportedMediaTypes.Add(ODataMediaTypes.ApplicationJsonODataFullMetadataIeee754CompatibleTrue);
+            formatter.SupportedMediaTypes.Add(ODataMediaTypes.ApplicationJsonODataNoMetadataStreamingTrueIeee754CompatibleFalse);
+            formatter.SupportedMediaTypes.Add(ODataMediaTypes.ApplicationJsonODataNoMetadataStreamingTrueIeee754CompatibleTrue);
+            formatter.SupportedMediaTypes.Add(ODataMediaTypes.ApplicationJsonODataNoMetadataStreamingFalseIeee754CompatibleTrue);
+            formatter.SupportedMediaTypes.Add(ODataMediaTypes.ApplicationJsonODataNoMetadataStreamingFalseIeee754CompatibleFalse);
+            formatter.SupportedMediaTypes.Add(ODataMediaTypes.ApplicationJsonODataNoMetadataIeee754CompatibleFalse);
+            formatter.SupportedMediaTypes.Add(ODataMediaTypes.ApplicationJsonODataNoMetadataIeee754CompatibleTrue);
+            formatter.SupportedMediaTypes.Add(ODataMediaTypes.ApplicationJsonStreamingTrueIeee754CompatibleFalse);
+            formatter.SupportedMediaTypes.Add(ODataMediaTypes.ApplicationJsonStreamingTrueIeee754CompatibleTrue);
+            formatter.SupportedMediaTypes.Add(ODataMediaTypes.ApplicationJsonStreamingFalseIeee754CompatibleFalse);
+            formatter.SupportedMediaTypes.Add(ODataMediaTypes.ApplicationJsonStreamingFalseIeee754CompatibleTrue);
+            formatter.SupportedMediaTypes.Add(ODataMediaTypes.ApplicationJsonIeee754CompatibleFalse);
+            formatter.SupportedMediaTypes.Add(ODataMediaTypes.ApplicationJsonIeee754CompatibleTrue);
 
             return formatter;
         }

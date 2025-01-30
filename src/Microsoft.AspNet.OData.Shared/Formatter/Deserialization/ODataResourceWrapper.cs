@@ -1,7 +1,13 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="ODataResourceWrapper.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
+using Microsoft.AspNet.OData.Common;
 using Microsoft.OData;
 
 namespace Microsoft.AspNet.OData.Formatter.Deserialization
@@ -15,15 +21,23 @@ namespace Microsoft.AspNet.OData.Formatter.Deserialization
         /// Initializes a new instance of <see cref="ODataResourceWrapper"/>.
         /// </summary>
         /// <param name="item">The wrapped item.</param>
-        public ODataResourceWrapper(ODataResource item)
+        public ODataResourceWrapper(ODataResourceBase item)
             : base(item)
         {
             NestedResourceInfos = new List<ODataNestedResourceInfoWrapper>();
+            NestedPropertyInfos = new List<ODataPropertyInfo>();
+            ResourceBase = item;
         }
 
         /// <summary>
-        /// Gets the wrapped <see cref="ODataResource"/>.
+        /// Gets the wrapped <see cref="ODataResourceBase"/>.
         /// </summary>
+        public ODataResourceBase ResourceBase { get; }
+
+        /// <summary>
+        /// Gets the wrapped <see cref="ODataResource"/>. This will return null for deleted resources.
+        /// </summary>
+        [Obsolete("Please use ResourceBase instead")]
         public ODataResource Resource
         {
             get
@@ -36,5 +50,11 @@ namespace Microsoft.AspNet.OData.Formatter.Deserialization
         /// Gets the inner nested resource infos.
         /// </summary>
         public IList<ODataNestedResourceInfoWrapper> NestedResourceInfos { get; private set; }
+
+        /// <summary>
+        /// Gets the nested property infos.
+        /// The nested property info is a property without value but could have instance annotations.
+        /// </summary>
+        public IList<ODataPropertyInfo> NestedPropertyInfos { get; private set; }
     }
 }

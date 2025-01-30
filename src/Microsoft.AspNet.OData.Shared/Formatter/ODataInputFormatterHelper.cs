@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="ODataInputFormatterHelper.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -76,6 +80,16 @@ namespace Microsoft.AspNet.OData.Formatter
                 oDataReaderSettings.BaseUri = baseAddress;
                 oDataReaderSettings.Validations = oDataReaderSettings.Validations & ~ValidationKinds.ThrowOnUndeclaredPropertyForNonOpenType;
                 oDataReaderSettings.Version = version;
+                oDataReaderSettings.MaxProtocolVersion = version;
+
+                ODataPath path = internalRequest.Context.Path;
+                ODataDeserializerContext readContext = getODataDeserializerContext();
+                readContext.Path = path;
+                readContext.Model = model;
+                readContext.ResourceType = type;
+                readContext.ResourceEdmType = expectedPayloadType;
+
+                oDataReaderSettings.EnablePropertyNameCaseInsensitive = !readContext.DisableCaseInsensitiveRequestPropertyBinding;
 
                 IODataRequestMessage oDataRequestMessage = getODataRequestMessage();
 
@@ -94,13 +108,6 @@ namespace Microsoft.AspNet.OData.Formatter
 
                 ODataMessageReader oDataMessageReader = new ODataMessageReader(oDataRequestMessage, oDataReaderSettings, model);
                 registerForDisposeAction(oDataMessageReader);
-
-                ODataPath path = internalRequest.Context.Path;
-                ODataDeserializerContext readContext = getODataDeserializerContext();
-                readContext.Path = path;
-                readContext.Model = model;
-                readContext.ResourceType = type;
-                readContext.ResourceEdmType = expectedPayloadType;
 
 #if NETCORE
                 result = await deserializer.ReadAsync(oDataMessageReader, type, readContext);

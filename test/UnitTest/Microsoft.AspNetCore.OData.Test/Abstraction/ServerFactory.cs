@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="ServerFactory.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -11,7 +15,7 @@ using Microsoft.AspNet.OData.Test.Common;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-#if !NETCOREAPP2_0
+#if !NETCOREAPP2_1
     using Microsoft.AspNetCore.Http.Features;
 #endif
 using Microsoft.AspNetCore.Mvc;
@@ -20,6 +24,7 @@ using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.AspNet.OData.Test.Abstraction
 {
@@ -39,19 +44,20 @@ namespace Microsoft.AspNet.OData.Test.Abstraction
             IWebHostBuilder builder = WebHost.CreateDefaultBuilder();
             builder.ConfigureServices(services =>
             {
-#if NETCOREAPP2_0
+#if NETCOREAPP2_1
                 services.AddMvc();
 #else
                 services.AddMvc(options => options.EnableEndpointRouting = false)
-                    .AddNewtonsoftJson();
+                    .AddNewtonsoftJson();  
 #endif
+
                 services.AddOData();
                 configureService?.Invoke(services);
             });
 
             builder.Configure(app =>
             {
-#if !NETCOREAPP2_0
+#if !NETCOREAPP2_1
                 app.Use(next => context =>
                 {
                     var body = context.Features.Get<IHttpBodyControlFeature>();

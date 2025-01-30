@@ -1,6 +1,11 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="AutoExpandDataModel.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
+using System.Collections.Generic;
 using System.Data.Entity;
 using Microsoft.AspNet.OData.Builder;
 
@@ -119,5 +124,31 @@ namespace Microsoft.Test.E2E.AspNet.OData.AutoExpand
         public int Id { get; set; }
 
         public string Description { get; set; }
+    }
+
+    public class Menu
+    {
+        public int Id { get; set; }
+        [AutoExpand]
+        public List<Tab> Tabs { get; set; }
+    }
+
+    public class Tab
+    {
+        public int Id { get; set; }
+        [AutoExpand]
+        public List<Item> Items { get; set; }
+    }
+
+    public class Item
+    {
+        public int Id { get; set; }
+        [AutoExpand]
+        public List<Note> Notes { get; set; }
+    }
+
+    public class Note
+    {
+        public int Id { get; set; }
     }
 }

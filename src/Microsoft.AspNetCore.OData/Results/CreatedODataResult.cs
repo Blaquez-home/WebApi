@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="CreatedODataResult.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Net;
@@ -19,7 +23,7 @@ namespace Microsoft.AspNet.OData.Results
     /// <remarks>This action result handles content negotiation and the HTTP prefer header. It generates a location
     /// header containing the edit link of the created entity and, if response has status code: NoContent, also
     /// generates an OData-EntityId header.</remarks>
-    public class CreatedODataResult<T> : IActionResult
+    public class CreatedODataResult<T> : ObjectResult
     {
         private readonly T _innerResult;
 
@@ -28,6 +32,7 @@ namespace Microsoft.AspNet.OData.Results
         /// </summary>
         /// <param name="entity">The created entity.</param>
         public CreatedODataResult(T entity)
+            : base(entity)
         {
             if (entity == null)
             {
@@ -49,7 +54,7 @@ namespace Microsoft.AspNet.OData.Results
         }
 
         /// <inheritdoc/>
-        public async virtual Task ExecuteResultAsync(ActionContext context)
+        public override async Task ExecuteResultAsync(ActionContext context)
         {
             HttpRequest request = context.HttpContext.Request;
             HttpResponse response = context.HttpContext.Response;

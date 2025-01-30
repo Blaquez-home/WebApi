@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="ODataConventionModelBuilder.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -547,7 +551,11 @@ namespace Microsoft.AspNet.OData.Builder
                 bool isCollection;
                 IEdmTypeConfiguration mappedType;
 
-                PropertyKind propertyKind = GetPropertyType(property, out isCollection, out mappedType);
+                PropertyKind propertyKind = GetPropertyType(property, out isCollection, out mappedType, out bool mapped);
+                if (!mapped)
+                {
+                    continue;
+                }
 
                 if (propertyKind == PropertyKind.Primitive || propertyKind == PropertyKind.Complex || propertyKind == PropertyKind.Enum)
                 {
@@ -690,17 +698,25 @@ namespace Microsoft.AspNet.OData.Builder
 
         // figures out the type of the property (primitive, complex, navigation) and the corresponding edm type if we have seen this type
         // earlier or the user told us about it.
-        private PropertyKind GetPropertyType(PropertyInfo property, out bool isCollection, out IEdmTypeConfiguration mappedType)
+        private PropertyKind GetPropertyType(PropertyInfo property, out bool isCollection, out IEdmTypeConfiguration mappedType, out bool mapped)
         {
             Contract.Assert(property != null);
+
+            mapped = true;
+            mappedType = null;
+            isCollection = false;
+
+            if (typeof(ODataIdContainer).IsAssignableFrom(property.PropertyType))
+            {
+                mapped = false;
+                return (PropertyKind)(int.MaxValue);
+            }
 
             // IDictionary<string, object> is used as a container to save/retrieve dynamic properties for an open type.
             // It is different from other collections (for example, IEnumerable<T> or IDictionary<string, int>)
             // which are used as navigation properties.
             if (typeof(IDictionary<string, object>).IsAssignableFrom(property.PropertyType))
             {
-                mappedType = null;
-                isCollection = false;
                 return PropertyKind.Dynamic;
             }
 
@@ -708,16 +724,12 @@ namespace Microsoft.AspNet.OData.Builder
             // It is different from other collections (for example, IDictionary<string,IDictionary<string, int>>)          
             if (typeof(IODataInstanceAnnotationContainer).IsAssignableFrom(property.PropertyType))
             {
-                mappedType = null;
-                isCollection = false;
-
                 return PropertyKind.InstanceAnnotations;
             }
 
             PropertyKind propertyKind;
             if (TryGetPropertyTypeKind(property.PropertyType, out mappedType, out propertyKind))
             {
-                isCollection = false;
                 return propertyKind;
             }
 
@@ -725,6 +737,13 @@ namespace Microsoft.AspNet.OData.Builder
             if (TypeHelper.IsCollection(property.PropertyType, out elementType))
             {
                 isCollection = true;
+
+                if (typeof(ODataIdContainer).IsAssignableFrom(elementType))
+                {
+                    mapped = false;
+                    return (PropertyKind)(int.MaxValue);
+                }
+
                 if (TryGetPropertyTypeKind(elementType, out mappedType, out propertyKind))
                 {
                     return propertyKind;

@@ -985,4 +985,34 @@
   <data name="InstanceAnnotationPropertyNotEmpty" xml:space="preserve">
     <value>InstanceAnnotation Property name cannot be null or empty.</value>
   </data>
+  <data name="ShouldHaveNavigationPropertyInNavigationExpandPath" xml:space="preserve">
+    <value>A navigation property expand path should have navigation property in the path.</value>
+  </data>
+  <data name="ResourcesShouldbePresent" xml:space="preserve">
+    <value>ResourceSetWrapper should have ResourceWrappers in it</value>
+  </data>
+  <data name="ResourceSetWrapperSupported" xml:space="preserve">
+    <value>Can only add ResourceWrapper to ResourceSetWrapper</value>
+  </data>
+  <data name="ChangedObjectTypeMismatch" xml:space="preserve">
+    <value>Cannot use Changed Object of type '{0}' on an entity of type '{1}'.</value>
+  </data>
+  <data name="DataModificationException" xml:space="preserve">
+    <value>Core.DataModificationException</value>
+  </data>
+  <data name="ContentID" xml:space="preserve">
+    <value>Core.ContentID</value>
+  </data>
+  <data name="DeltaLinkNotSupported" xml:space="preserve">
+    <value>DeltaLinks are not supported</value>
+  </data>
+  <data name="ObjectToDeleteNotFound" xml:space="preserve">
+    <value>Object to delete not found.</value>
+  </data>
+  <data name="SkipTokenProcessingError" xml:space="preserve">
+    <value>Unable to get property values from the skiptoken value.</value>
+  </data>
+  <data name="JsonConverterDoesNotSupportRead" xml:space="preserve">
+    <value>'{0}' is internal and should never be deserialized into.</value>
+  </data>
 </root>

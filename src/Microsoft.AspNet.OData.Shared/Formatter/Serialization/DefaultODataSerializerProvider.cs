@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="DefaultODataSerializerProvider.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -107,6 +111,10 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
             else if (TypeHelper.IsTypeAssignableFrom(typeof(IEdmModel), type))
             {
                 return _rootContainer.GetRequiredService<ODataMetadataSerializer>();
+            }
+            else if (TypeHelper.IsTypeAssignableFrom(typeof(IDeltaSet), type))
+            {
+                return _rootContainer.GetRequiredService<ODataDeltaFeedSerializer>();
             }
 
             // Get the model. Using a Func<IEdmModel> to delay evaluation of the model

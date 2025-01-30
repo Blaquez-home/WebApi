@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="ODataBatchReaderExtensions.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -132,9 +136,16 @@ namespace Microsoft.AspNet.OData.Batch
 
             HttpContext context = CreateHttpContext(originalContext);
             HttpRequest request = context.Request;
+            Uri requestUri = batchRequest.Url;
+
+            if (!requestUri.IsAbsoluteUri)
+            {
+                Uri baseUri = batchRequest.Container.GetRequiredService<ODataMessageReaderSettings>().BaseUri;
+                requestUri = new Uri(baseUri, requestUri);
+            }
 
             request.Method = batchRequest.Method;
-            request.CopyAbsoluteUrl(batchRequest.Url);
+            request.CopyAbsoluteUrl(requestUri);
 
             // Not using bufferContentStream. Unlike AspNet, AspNetCore cannot guarantee the disposal
             // of the stream in the context of execution so there is no choice but to copy the stream

@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="NavigationRoutingConvention.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Linq;
@@ -46,9 +50,9 @@ namespace Microsoft.AspNet.OData.Routing.Conventions
                     return null;
                 }
 
-                // It is not valid to *Put/Patch" to any collection-valued navigation property.
+                // It is not valid to *Put" to any collection-valued navigation property.
                 if (navigationProperty.TargetMultiplicity() == EdmMultiplicity.Many &&
-                    (ODataRequestMethod.Put == method || ODataRequestMethod.Patch == method))
+                    ODataRequestMethod.Put == method)
                 {
                     return null;
                 }

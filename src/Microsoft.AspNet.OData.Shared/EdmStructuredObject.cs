@@ -1,10 +1,15 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="EdmStructuredObject.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Linq;
+using System.Reflection;
 using Microsoft.AspNet.OData.Common;
 using Microsoft.AspNet.OData.Formatter;
 using Microsoft.OData.Edm;
@@ -19,7 +24,6 @@ namespace Microsoft.AspNet.OData
     {
         private Dictionary<string, object> _container = new Dictionary<string, object>();
         private HashSet<string> _setProperties = new HashSet<string>();
-
         private IEdmStructuredType _expectedEdmType;
         private IEdmStructuredType _actualEdmType;
 
@@ -176,7 +180,7 @@ namespace Microsoft.AspNet.OData
         }
 
         /// <summary>
-        /// Get all dynamic properties
+        /// Get all dynamic properties.
         /// </summary>
         public Dictionary<string, object> TryGetDynamicProperties()
         {
@@ -221,7 +225,10 @@ namespace Microsoft.AspNet.OData
                     (isCollection && propertyType.AsCollection().ElementType().IsPrimitive()))
                 {
                     // primitive or primitive collection
-                    return Activator.CreateInstance(clrType);
+                    if (TypeHelper.HasDefaultConstructor(clrType))
+                    {
+                        return Activator.CreateInstance(clrType);
+                    }
                 }
                 else
                 {
@@ -270,6 +277,7 @@ namespace Microsoft.AspNet.OData
                     {
                         return typeof(EdmEnumObjectCollection);
                     }
+
                     break;
             }
 

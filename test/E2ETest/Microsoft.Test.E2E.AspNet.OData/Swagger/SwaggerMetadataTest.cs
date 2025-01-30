@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="SwaggerMetadataTest.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System.Collections.Generic;
 using System.Linq;
@@ -108,6 +112,12 @@ namespace Microsoft.Test.E2E.AspNet.OData.Swagger
           ""Customers""
         ],
         ""parameters"": [
+          {
+            ""name"": ""$filter"",
+            ""in"": ""query"",
+            ""description"": ""Filter by some expression"",
+            ""type"": ""string""
+          },
           {
             ""name"": ""$expand"",
             ""in"": ""query"",
@@ -312,6 +322,12 @@ namespace Microsoft.Test.E2E.AspNet.OData.Swagger
         ],
         ""parameters"": [
           {
+            ""name"": ""$filter"",
+            ""in"": ""query"",
+            ""description"": ""Filter by some expression"",
+            ""type"": ""string""
+          },
+          {
             ""name"": ""$expand"",
             ""in"": ""query"",
             ""description"": ""Expand navigation property"",
@@ -514,6 +530,12 @@ namespace Microsoft.Test.E2E.AspNet.OData.Swagger
            ""CompositeKeyItems""
          ],
          ""parameters"": [
+           {
+             ""name"": ""$filter"",
+             ""in"": ""query"",
+             ""description"": ""Filter by some expression"",
+             ""type"": ""string""
+           },
            {
              ""name"": ""$expand"",
              ""in"": ""query"",

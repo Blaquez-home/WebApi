@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="ChangeSetRequestItem.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -47,7 +51,7 @@ namespace Microsoft.AspNet.OData.Batch
                 throw Error.ArgumentNull("invoker");
             }
 
-            Dictionary<string, string> contentIdToLocationMapping = new Dictionary<string, string>();
+            IDictionary<string, string> contentIdToLocationMapping = this.ContentIdToLocationMapping ?? new Dictionary<string, string>();
             List<HttpResponseMessage> responses = new List<HttpResponseMessage>();
 
             try

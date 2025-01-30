@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="ODataSwaggerConverterTest.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using Microsoft.AspNet.OData.Test.Abstraction;
 using Microsoft.AspNet.OData.Test.Common;
@@ -63,6 +67,12 @@ namespace Microsoft.AspNet.OData.Test
           ""Customers""
         ],
         ""parameters"": [
+          {
+            ""name"": ""$filter"",
+            ""in"": ""query"",
+            ""description"": ""Filter by some expression"",
+            ""type"": ""string""
+          },
           {
             ""name"": ""$expand"",
             ""in"": ""query"",
@@ -266,6 +276,12 @@ namespace Microsoft.AspNet.OData.Test
           ""Orders""
         ],
         ""parameters"": [
+          {
+            ""name"": ""$filter"",
+            ""in"": ""query"",
+            ""description"": ""Filter by some expression"",
+            ""type"": ""string""
+          },
           {
             ""name"": ""$expand"",
             ""in"": ""query"",

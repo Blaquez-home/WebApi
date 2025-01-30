@@ -1,8 +1,11 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="EdmDeltaDeletedLink.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
-using System.Diagnostics.Contracts;
 using Microsoft.OData.Edm;
 
 namespace Microsoft.AspNet.OData
@@ -17,7 +20,6 @@ namespace Microsoft.AspNet.OData
         private Uri _source;
         private Uri _target;
         private string _relationship;
-        private EdmDeltaType _edmType;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EdmDeltaDeletedLink"/> class.
@@ -45,7 +47,6 @@ namespace Microsoft.AspNet.OData
         public EdmDeltaDeletedLink(IEdmEntityType entityType, bool isNullable)
             : base(entityType, isNullable)
         {
-            _edmType = new EdmDeltaType(entityType, EdmDeltaEntityKind.DeletedLinkEntry);
         }
 
         /// <inheritdoc />
@@ -88,12 +89,11 @@ namespace Microsoft.AspNet.OData
         }
 
         /// <inheritdoc />
-        public EdmDeltaEntityKind DeltaKind
+        public override EdmDeltaEntityKind DeltaKind
         {
             get
             {
-                Contract.Assert(_edmType != null);
-                return _edmType.DeltaKind;
+                return EdmDeltaEntityKind.DeletedLinkEntry;
             }
         }
     }

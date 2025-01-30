@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="DefaultODataPathHandlerTest.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -1880,7 +1884,7 @@ namespace Microsoft.AspNet.OData.Test.Routing
             // Act & Assert
             ExceptionAssert.Throws<ODataException>(
                 () => _parser.Parse(model.Model, _serviceRoot, path),
-                "The number of keys specified in the URI does not match number of key properties for the resource 'NS.CustomerWithMultiKeys'.");
+                "The key in the request URI is not valid for resource 'NS.CustomerWithMultiKeys'. Ensure that the names and number of key properties match the declared key of the resource 'NS.CustomerWithMultiKeys'.");
         }
 
         [Theory]

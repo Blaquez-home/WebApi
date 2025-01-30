@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="AggregationDataModel.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Data.Entity;
@@ -83,5 +87,22 @@ namespace Microsoft.Test.E2E.AspNet.OData.Aggregation
         Small,
         Medium,
         Big
+    }
+
+    public class Employee
+    {
+        public int Id { get; set; }
+        public NextOfKin NextOfKin { get; set; }
+    }
+
+    public class NextOfKin
+    {
+        public string Name { get; set; }
+        public Location PhysicalAddress { get; set; }
+    }
+
+    public class Location
+    {
+        public string City { get; set; }
     }
 }

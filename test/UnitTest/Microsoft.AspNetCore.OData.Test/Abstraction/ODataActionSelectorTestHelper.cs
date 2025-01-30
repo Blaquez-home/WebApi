@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="ODataActionSelectorTestHelper.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System.Collections.Generic;
 using System.Reflection;
@@ -13,7 +17,7 @@ using System.IO;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using System.Linq;
 using System.Text;
-#if NETCOREAPP2_0
+#if NETCOREAPP2_1
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.OData;
@@ -83,7 +87,7 @@ namespace Microsoft.AspNet.OData.Test.Abstraction
                 as IReadOnlyList<ControllerActionDescriptor>;
             actionDescriptors = actionDescriptors.Where(a => a.ActionName == actionName).ToList();
             var serviceProvider = routeBuilder.ServiceProvider;
-#if NETCOREAPP2_0
+#if NETCOREAPP2_1
             var actionsProvider = serviceProvider.GetRequiredService<IActionDescriptorCollectionProvider>();
             var actionConstraintsProvider = serviceProvider.GetRequiredService<ActionConstraintCache>();
             var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
@@ -130,7 +134,10 @@ namespace Microsoft.AspNet.OData.Test.Abstraction
             foreach (var keyValuePair in routeDataValues)
             {
                 routeData.Values[keyValuePair.Key] = keyValuePair.Value;
-                keyCount++;
+                if (keyValuePair.Key != ODataRouteConstants.MethodInfo)
+                {
+                    keyCount++;
+                }
             }
 
             routingConventionsStore[ODataRouteConstants.KeyCount] = keyCount;

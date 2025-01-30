@@ -7,7 +7,6 @@
     <Message Importance="high" Text="##vso[task.setvariable variable=VersionFullSemantic]$(VersionFullSemantic)" />
     <Message Importance="high" Text="##vso[task.setvariable variable=VersionFull]$(VersionFull)" />
     <Message Importance="high" Text="##vso[task.setvariable variable=VersionNuGetSemantic]$(VersionNuGetSemantic)" />
-    <Message Importance="high" Text="##vso[task.setvariable variable=VersionNugetNightlyBuild]$(VersionNugetNightlyBuild)" />
     <Message Importance="high" Text="##vso[task.setvariable variable=AspNetPackageDependency]$(AspNetPackageDependency)" />
     <Message Importance="high" Text="##vso[task.setvariable variable=AspNetCorePackageDependency]$(AspNetCorePackageDependency)" />
     <Message Importance="high" Text="##vso[task.setvariable variable=DependencyInjection1PackageDependency]$(DependencyInjection1PackageDependency)" />

@@ -1,15 +1,17 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="IODataInstanceAnnotationContainer.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
-using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace Microsoft.AspNet.OData.Builder
 {
     /// <summary>
-    /// Interface to used as a Container for holding Instance Annotations, An default implementation is provided
-    /// Custoer can implement the interface and can have their own implementation.
+    /// Identifies a container for holding instance annotations. A default implementation is provided.
+    /// Customers can have their own implementation.
     /// </summary>
     public interface IODataInstanceAnnotationContainer
     {

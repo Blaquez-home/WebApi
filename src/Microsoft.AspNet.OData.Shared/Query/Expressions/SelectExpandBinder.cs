@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="SelectExpandBinder.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -175,7 +179,8 @@ namespace Microsoft.AspNet.OData.Query.Expressions
 
             // Expression:  source.Property
             string propertyName = EdmLibHelpers.GetClrPropertyName(property, _model);
-            PropertyInfo propertyInfo = source.Type.GetProperty(propertyName);
+            PropertyInfo propertyInfo = TypeHelper.GetProperty(source.Type, propertyName);
+
             Expression propertyValue = Expression.Property(source, propertyInfo);
             Type nullablePropertyType = TypeHelper.ToNullable(propertyValue.Type);
             Expression nullablePropertyValue = ExpressionHelpers.ToNullable(propertyValue);
@@ -345,7 +350,18 @@ namespace Microsoft.AspNet.OData.Query.Expressions
 
             Type wrapperGenericType = GetWrapperGenericType(isInstancePropertySet, isTypeNamePropertySet, isContainerPropertySet);
             wrapperType = wrapperGenericType.MakeGenericType(elementType);
-            return Expression.MemberInit(Expression.New(wrapperType), wrapperTypeMemberAssignments);
+            Expression propertyValue = Expression.MemberInit(Expression.New(wrapperType), wrapperTypeMemberAssignments);
+
+            if (_settings.HandleNullPropagation == HandleNullPropagationOption.True &&
+                (!source.Type.IsValueType || Nullable.GetUnderlyingType(source.Type) != null))
+            {
+                propertyValue = Expression.Condition(
+                    test: Expression.Equal(source, Expression.Constant(null)),
+                    ifTrue: Expression.Constant(null, propertyValue.Type),
+                    ifFalse: propertyValue);
+            }
+
+            return propertyValue;
         }
 
         /// <summary>
@@ -534,15 +550,15 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             // for $select=NS.SubType/Property, we don't care about the leading type segment, because with or without the type segment
             // the "Property" property value expression should be built into the property container.
 
-            PropertySegment firstSturucturalPropertySegment = firstNonTypeSegment as PropertySegment;
-            if (firstSturucturalPropertySegment != null)
+            PropertySegment firstStructuralPropertySegment = firstNonTypeSegment as PropertySegment;
+            if (firstStructuralPropertySegment != null)
             {
                 // $select=abc/..../xyz
                 SelectExpandIncludedProperty newPropertySelectItem;
-                if (!currentLevelPropertiesInclude.TryGetValue(firstSturucturalPropertySegment.Property, out newPropertySelectItem))
+                if (!currentLevelPropertiesInclude.TryGetValue(firstStructuralPropertySegment.Property, out newPropertySelectItem))
                 {
-                    newPropertySelectItem = new SelectExpandIncludedProperty(firstSturucturalPropertySegment, navigationSource);
-                    currentLevelPropertiesInclude[firstSturucturalPropertySegment.Property] = newPropertySelectItem;
+                    newPropertySelectItem = new SelectExpandIncludedProperty(firstStructuralPropertySegment, navigationSource);
+                    currentLevelPropertiesInclude[firstStructuralPropertySegment.Property] = newPropertySelectItem;
                 }
 
                 newPropertySelectItem.AddSubSelectItem(remainingSegments, pathSelectItem);
@@ -813,7 +829,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             }
 
             int? modelBoundPageSize = querySettings == null ? null : querySettings.PageSize;
-            propertyValue = ProjectAsWrapper(propertyValue, subSelectExpandClause, structuralProperty.Type.ToStructuredType(), pathSelectItem.NavigationSource,
+            propertyValue = ProjectAsWrapper(propertyValue, subSelectExpandClause, propertyStructuredType, pathSelectItem.NavigationSource,
                 pathSelectItem.OrderByOption, // $orderby=...
                 pathSelectItem.TopOption, // $top=...
                 pathSelectItem.SkipOption, // $skip=...
@@ -825,17 +841,6 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                 if (!structuralProperty.Type.IsCollection())
                 {
                     propertyExpression.NullCheck = nullCheck;
-                }
-                else if (_settings.PageSize.HasValue)
-                {
-                    propertyExpression.PageSize = _settings.PageSize.Value;
-                }
-                else
-                {
-                    if (querySettings != null && querySettings.PageSize.HasValue)
-                    {
-                        propertyExpression.PageSize = querySettings.PageSize.Value;
-                    }
                 }
 
                 propertyExpression.TotalCount = countExpression;
@@ -973,8 +978,12 @@ namespace Microsoft.AspNet.OData.Query.Expressions
 
         // new CollectionWrapper<ElementType> { Instance = source.Select((ElementType element) => new Wrapper { }) }
         [SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity", Justification = "These are simple conversion function and cannot be split up.")]
-        private Expression ProjectCollection(Expression source, Type elementType,
-            SelectExpandClause selectExpandClause, IEdmStructuredType structuredType, IEdmNavigationSource navigationSource,
+        private Expression ProjectCollection(
+            Expression source,
+            Type elementType,
+            SelectExpandClause selectExpandClause,
+            IEdmStructuredType structuredType,
+            IEdmNavigationSource navigationSource,
             OrderByClause orderByClause,
             long? topOption,
             long? skipOption,
@@ -1000,9 +1009,10 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             //      (ElementType element) => new Wrapper { }
             LambdaExpression selector = Expression.Lambda(projection, element);
 
+            Expression modifiedSource = source;
             if (orderByClause != null)
             {
-                source = AddOrderByQueryForSource(source, orderByClause, elementType);
+                modifiedSource = AddOrderByQueryForSource(modifiedSource, orderByClause, elementType);
             }
 
             bool hasTopValue = topOption != null && topOption.HasValue;
@@ -1028,7 +1038,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
                         bool alreadyOrdered = false;
                         foreach (var prop in properties)
                         {
-                            source = ExpressionHelpers.OrderByPropertyExpression(source, prop.Name, elementType, alreadyOrdered);
+                            modifiedSource = ExpressionHelpers.OrderByPropertyExpression(modifiedSource, prop.Name, elementType, alreadyOrdered);
                             if (!alreadyOrdered)
                             {
                                 alreadyOrdered = true;
@@ -1041,39 +1051,42 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             if (hasSkipvalue)
             {
                 Contract.Assert(skipOption.Value <= Int32.MaxValue);
-                source = ExpressionHelpers.Skip(source, (int)skipOption.Value, elementType,
+                modifiedSource = ExpressionHelpers.Skip(modifiedSource, (int)skipOption.Value, elementType,
                     _settings.EnableConstantParameterization);
             }
 
             if (hasTopValue)
             {
                 Contract.Assert(topOption.Value <= Int32.MaxValue);
-                source = ExpressionHelpers.Take(source, (int)topOption.Value, elementType,
+                modifiedSource = ExpressionHelpers.Take(modifiedSource, (int)topOption.Value, elementType,
                     _settings.EnableConstantParameterization);
             }
 
-            if (_settings.PageSize.HasValue || modelBoundPageSize.HasValue || hasTopValue || hasSkipvalue)
+            if (entityType != null)
             {
-                // don't page nested collections if EnableCorrelatedSubqueryBuffering is enabled
-                if (!_settings.EnableCorrelatedSubqueryBuffering)
+                if (_settings.PageSize.HasValue || modelBoundPageSize.HasValue)
                 {
-                    if (_settings.PageSize.HasValue)
+                    // don't page nested collections if EnableCorrelatedSubqueryBuffering is enabled
+                    if (!_settings.EnableCorrelatedSubqueryBuffering)
                     {
-                        source = ExpressionHelpers.Take(source, _settings.PageSize.Value + 1, elementType,
-                            _settings.EnableConstantParameterization);
-                    }
-                    else if (_settings.ModelBoundPageSize.HasValue)
-                    {
-                        source = ExpressionHelpers.Take(source, modelBoundPageSize.Value + 1, elementType,
-                            _settings.EnableConstantParameterization);
+                        if (_settings.PageSize.HasValue)
+                        {
+                            modifiedSource = ExpressionHelpers.Take(modifiedSource, _settings.PageSize.Value + 1, elementType,
+                                _settings.EnableConstantParameterization);
+                        }
+                        else if (_settings.ModelBoundPageSize.HasValue)
+                        {
+                            modifiedSource = ExpressionHelpers.Take(modifiedSource, modelBoundPageSize.Value + 1, elementType,
+                                _settings.EnableConstantParameterization);
+                        }
                     }
                 }
-            }
+            }                
 
             // expression
             //      source.Select((ElementType element) => new Wrapper { })
             var selectMethod = GetSelectMethod(elementType, projection.Type);
-            Expression selectedExpresion = Expression.Call(selectMethod, source, selector);
+            Expression selectedExpresion = Expression.Call(selectMethod, modifiedSource, selector);
 
             // Append ToList() to collection as a hint to LINQ provider to buffer correlated subqueries in memory and avoid executing N+1 queries
             if (_settings.EnableCorrelatedSubqueryBuffering)
@@ -1226,7 +1239,7 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             }
         }
 
-        /* Entityframework requires that the two different type initializers for a given type in the same query have the
+        /* EntityFramework requires that the two different type initializers for a given type in the same query have the
         same set of properties in the same order.
 
         A ~/People?$select=Name&$expand=Friend results in a select expression that has two SelectExpandWrapper<Person>
@@ -1234,22 +1247,34 @@ namespace Microsoft.AspNet.OData.Query.Expressions
         The first wrapper has the Container property set (contains Name and Friend values) where as the second wrapper
         has the Instance property set as it contains all the properties of the expanded person.
 
-        The below four classes workaround that entity framework limitation by defining a seperate type for each
+        The below four classes workaround that EntityFramework limitation by defining a separate type for each
         property selection combination possible. */
 
-        private class SelectAllAndExpand<TEntity> : SelectExpandWrapper<TEntity>
+#if NETCOREAPP3_1_OR_GREATER
+    [System.Text.Json.Serialization.JsonConverter(typeof(SelectExpandWrapperJsonConverter))]
+#endif
+        internal class SelectAllAndExpand<TEntity> : SelectExpandWrapper<TEntity>
         {
         }
 
-        private class SelectAll<TEntity> : SelectExpandWrapper<TEntity>
+#if NETCOREAPP3_1_OR_GREATER
+    [System.Text.Json.Serialization.JsonConverter(typeof(SelectExpandWrapperJsonConverter))]
+#endif
+        internal class SelectAll<TEntity> : SelectExpandWrapper<TEntity>
         {
         }
 
-        private class SelectSomeAndInheritance<TEntity> : SelectExpandWrapper<TEntity>
+#if NETCOREAPP3_1_OR_GREATER
+    [System.Text.Json.Serialization.JsonConverter(typeof(SelectExpandWrapperJsonConverter))]
+#endif
+        internal class SelectSomeAndInheritance<TEntity> : SelectExpandWrapper<TEntity>
         {
         }
 
-        private class SelectSome<TEntity> : SelectAllAndExpand<TEntity>
+#if NETCOREAPP3_1_OR_GREATER
+    [System.Text.Json.Serialization.JsonConverter(typeof(SelectExpandWrapperJsonConverter))]
+#endif
+        internal class SelectSome<TEntity> : SelectAllAndExpand<TEntity>
         {
         }
     }

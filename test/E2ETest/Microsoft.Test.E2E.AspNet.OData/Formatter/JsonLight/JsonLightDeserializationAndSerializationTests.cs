@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="JsonLightDeserializationAndSerializationTests.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -191,6 +195,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.Formatter.JsonLight
                 @"""string3"":""}t@xt{""," +
                 @"""string4"":""[t@xt'',,][']other::]mo}{retext""," +
                 @"""number10"":10," +
+                @"""number10point5@odata.type"":""#decimal""," +
                 @"""number10point5"":10.5," +
                 @"""number10e25"":1E+26," +
                 @"""boolean_true"":true," +

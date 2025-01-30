@@ -1,11 +1,16 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="ODataPrimitiveSerializer.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 #if NETFX // System.Data.Linq.Binary is only supported in the AspNet version.
 using System.Data.Linq;
 #endif
 using System.Diagnostics.Contracts;
+using System.Globalization;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Microsoft.AspNet.OData.Common;
@@ -121,7 +126,10 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
                 typeName = primitiveType.FullName();
             }
 
-            primitive.TypeAnnotation = new ODataTypeAnnotation(typeName);
+            if (typeName != null)
+            {
+                primitive.TypeAnnotation = new ODataTypeAnnotation(typeName);
+            }
         }
 
         internal static ODataPrimitiveValue CreatePrimitive(object value, IEdmPrimitiveTypeReference primitiveType,
@@ -151,16 +159,27 @@ namespace Microsoft.AspNet.OData.Formatter.Serialization
             }
 
             Type type = value.GetType();
-            if (primitiveType != null && primitiveType.IsDate() && TypeHelper.IsDateTime(type))
-            {
-                Date dt = (DateTime)value;
-                return dt;
-            }
 
-            if (primitiveType != null && primitiveType.IsTimeOfDay() && TypeHelper.IsTimeSpan(type))
+            if (primitiveType != null)
             {
-                TimeOfDay tod = (TimeSpan)value;
-                return tod;
+                if (primitiveType.IsDate() && TypeHelper.IsDateTime(type))
+                {
+                    Date dt = (DateTime)value;
+                    
+                    return dt;
+                }
+
+                if (primitiveType.IsTimeOfDay() && TypeHelper.IsTimeSpan(type))
+                {
+                    TimeOfDay tod = (TimeSpan)value;
+                    
+                    return tod;
+                }
+
+                if (primitiveType is EdmDecimalTypeReference decimalTypeReference && decimalTypeReference.Scale.HasValue && value is decimal decimalValue)
+                {
+                    value = decimal.Round(decimalValue, decimalTypeReference.Scale.Value, MidpointRounding.AwayFromZero);
+                }
             }
 
             return ConvertUnsupportedPrimitives(value);

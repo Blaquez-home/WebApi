@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="UmbrellaController.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -33,6 +37,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.Singleton
                 Category = CompanyCategory.Communication,
                 Partners = new List<Partner>(),
                 Branches = new List<Office>(),
+                Projects = new List<Project>(),
             };
         }
 

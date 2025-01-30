@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="ODataSwaggerUtilities.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Diagnostics.Contracts;
@@ -36,6 +40,7 @@ namespace Microsoft.AspNet.OData
                         .Description("Returns the EntitySet " + entitySet.Name)
                         .Tags(entitySet.Name)
                         .Parameters(new JArray()
+                            .Parameter("$filter", "query", "Filter by some expression", "string")
                             .Parameter("$expand", "query", "Expand navigation property", "string")
                             .Parameter("$select", "query", "select structural property", "string")
                             .Parameter("$orderby", "query", "order by some property", "string")

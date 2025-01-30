@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="RoutingConfigurationFactory.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -13,7 +17,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
-#if NETCOREAPP2_0
+#if NETCOREAPP2_1
 using Microsoft.AspNetCore.Builder.Internal;
 using Microsoft.AspNetCore.Mvc.Internal;
 #endif
@@ -77,7 +81,7 @@ namespace Microsoft.AspNet.OData.Test.Abstraction
             // Create a route build with a default path handler.
             IRouteBuilder routeBuilder = new RouteBuilder(appBuilder);
 
-#if NETCOREAPP2_0
+#if NETCOREAPP2_1
             routeBuilder.DefaultHandler = new MvcRouteHandler(
                 mockInvokerFactory.Object,
                 mockActionSelector.Object,
@@ -203,7 +207,7 @@ namespace Microsoft.AspNet.OData.Test.Abstraction
             // Create a route build with a default path handler.
             IRouteBuilder routeBuilder = new RouteBuilder(appBuilder);
 
-#if NETCOREAPP2_0
+#if NETCOREAPP2_1
             routeBuilder.DefaultHandler = new MvcRouteHandler(
                 mockInvokerFactory.Object,
                 mockActionSelector.Object,

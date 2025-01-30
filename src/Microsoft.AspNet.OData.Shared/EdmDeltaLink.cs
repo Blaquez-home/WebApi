@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="EdmDeltaLink.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Diagnostics.Contracts;
@@ -88,12 +92,11 @@ namespace Microsoft.AspNet.OData
         }
 
         /// <inheritdoc />
-        public EdmDeltaEntityKind DeltaKind
+        public override EdmDeltaEntityKind DeltaKind
         {
             get
             {
-                Contract.Assert(_edmType != null);
-                return _edmType.DeltaKind;
+                return EdmDeltaEntityKind.LinkEntry;
             }
         }
     }

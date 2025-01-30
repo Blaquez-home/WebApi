@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="ODataModelBuilderTest.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -947,7 +951,7 @@ namespace Microsoft.AspNet.OData.Test.Builder
 
             // Assert
             Assert.Null(decimalType.Precision);
-            Assert.Equal(0, decimalType.Scale);
+            Assert.Null(decimalType.Scale);
             Assert.Null(stringType.MaxLength);
         }
 

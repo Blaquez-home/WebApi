@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="FilterBinderTests.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -1040,6 +1044,25 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
             RunFilters(filters,
               new Product { },
               new { WithNullPropagation = true, WithoutNullPropagation = true });
+        }
+
+        [Fact]
+        public void StringMatchesPattern()
+        {
+            // Arrange & Act & Assert
+            var filters = VerifyQueryDeserialization(
+                "matchesPattern(ProductName, 'A\\wc')",
+                "$it => $it.ProductName.IsMatch(\"A\\wc\", ECMAScript)",
+                NotTesting);
+
+            // Arrange & Act & Assert
+            RunFilters(filters, new Product { ProductName = null }, new { WithNullPropagation = false, WithoutNullPropagation = typeof(ArgumentNullException) });
+
+            RunFilters(filters, new Product { ProductName = "Abcd" }, new { WithNullPropagation = true, WithoutNullPropagation = true });
+
+            RunFilters(filters, new Product { ProductName = "Abd" }, new { WithNullPropagation = false, WithoutNullPropagation = false });
+            
+            RunFilters(filters, new Product { ProductName = "Aθd" }, new { WithNullPropagation = false, WithoutNullPropagation = false }); // ECMAScript has strict matching of \w
         }
 
         [Fact]
@@ -2359,10 +2382,10 @@ namespace Microsoft.AspNet.OData.Test.Query.Expressions
             // Arrange & Act & Assert
 #if NETCOREAPP3_1
             ExceptionAssert.Throws<ArgumentNullException>(() => Bind<Product>(filter),
-                "Value cannot be null. (Parameter 'qualifiedName')");
+                "Value cannot be null. (Parameter 'typeName')");
 #else
             ExceptionAssert.Throws<ArgumentNullException>(() => Bind<Product>(filter),
-                "Value cannot be null.\r\nParameter name: qualifiedName");
+                "Value cannot be null.\r\nParameter name: typeName");
 #endif
         }
 

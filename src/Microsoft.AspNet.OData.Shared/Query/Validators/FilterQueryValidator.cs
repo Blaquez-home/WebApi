@@ -1,8 +1,13 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="FilterQueryValidator.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Contracts;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.AspNet.OData.Common;
 using Microsoft.AspNet.OData.Formatter;
@@ -456,6 +461,16 @@ namespace Microsoft.AspNet.OData.Query.Validators
                     SingleComplexNode singleComplexNode = propertyAccessNode.Source as SingleComplexNode;
                     notFilterable = EdmLibHelpers.IsNotFilterable(property, singleComplexNode.Property,
                         property.DeclaringType, _model, _defaultQuerySettings.EnableFilter);
+                }
+                else if (propertyAccessNode.Source.Kind == QueryNodeKind.ResourceRangeVariableReference)
+                {
+                    ResourceRangeVariableReferenceNode resourceRangeVariableReferenceNode = propertyAccessNode.Source as ResourceRangeVariableReferenceNode;
+                    notFilterable = EdmLibHelpers.IsNotFilterable(
+                        property,
+                        _property,
+                        resourceRangeVariableReferenceNode.RangeVariable.StructuredTypeReference.StructuredDefinition(),
+                        _model,
+                        _defaultQuerySettings.EnableFilter);
                 }
                 else
                 {
@@ -935,6 +950,9 @@ namespace Microsoft.AspNet.OData.Query.Validators
                     break;
                 case ClrCanonicalFunctions.LengthFunctionName:
                     result = AllowedFunctions.Length;
+                    break;
+                case ClrCanonicalFunctions.MatchesPatternFunctionName:
+                    result = AllowedFunctions.MatchesPattern;
                     break;
                 case ClrCanonicalFunctions.MinuteFunctionName:
                     result = AllowedFunctions.Minute;

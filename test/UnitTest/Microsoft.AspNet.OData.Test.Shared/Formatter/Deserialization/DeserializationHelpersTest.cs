@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="DeserializationHelpersTest.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -24,6 +28,7 @@ using Microsoft.OData;
 using Microsoft.OData.Edm;
 using Moq;
 using Xunit;
+using Microsoft.AspNet.OData.Builder;
 
 namespace Microsoft.AspNet.OData.Test.Formatter.Deserialization
 {
@@ -253,14 +258,14 @@ namespace Microsoft.AspNet.OData.Test.Formatter.Deserialization
             // Arrange
             IEnumerable<int> value = new int[] { 1, 2, 3 };
             object resource = new SampleClassWithNonSettableCollectionProperties
-                {
-                    ICollection = { 42 },
-                    IList = { 42 },
-                    Collection = { 42 },
-                    List = { 42 },
-                    CustomCollectionWithNoEmptyCtor = { 42 },
-                    CustomCollection = { 42 }
-                };
+            {
+                ICollection = { 42 },
+                IList = { 42 },
+                Collection = { 42 },
+                List = { 42 },
+                CustomCollectionWithNoEmptyCtor = { 42 },
+                CustomCollection = { 42 }
+            };
 
             // Act
             DeserializationHelpers.SetCollectionProperty(resource, propertyName, null, value, clearCollection: true);
@@ -290,7 +295,7 @@ namespace Microsoft.AspNet.OData.Test.Formatter.Deserialization
 
             // Act
             DeserializationHelpers.ApplyProperty(property, entityTypeReference, resource.Object, provider,
-                new ODataDeserializerContext{ Model = new EdmModel() });
+                new ODataDeserializerContext { Model = new EdmModel() });
 
             // Assert
             resource.Verify();
@@ -314,7 +319,7 @@ namespace Microsoft.AspNet.OData.Test.Formatter.Deserialization
             resource.Setup(r => r.TrySetPropertyValue("Key1", "Value1")).Returns(true).Verifiable();
 
             // Act
-            DeserializationHelpers.ApplyInstanceAnnotations(resource.Object, entityTypeReference, null,provider,
+            DeserializationHelpers.ApplyInstanceAnnotations(resource.Object, entityTypeReference, null, provider,
     new ODataDeserializerContext { Model = new EdmModel() });
 
             DeserializationHelpers.ApplyProperty(property, entityTypeReference, resource.Object, provider,
@@ -322,6 +327,66 @@ namespace Microsoft.AspNet.OData.Test.Formatter.Deserialization
 
             // Assert
             resource.Verify();
+        }
+
+
+
+        [Fact]
+        public void ReadResource_DeletedResource_WithTransientTypeAndAnnotations()
+        {
+            // Arrange
+            ODataConventionModelBuilder builder = ODataConventionModelBuilderFactory.Create();
+            builder.EntityType<SimpleOpenCustomer>();
+            builder.EnumType<SimpleEnum>();
+            IEdmModel model = builder.GetEdmModel();
+
+            IEdmEntityTypeReference customerTypeReference = model.GetEdmTypeReference(typeof(SimpleOpenCustomer)).AsEntity();
+            ODataDeserializerProvider _deserializerProvider = ODataDeserializerProviderFactory.Create();
+            var deserializer = new ODataResourceSetDeserializer(_deserializerProvider);
+
+            var instanceAnnotations = new List<ODataInstanceAnnotation>();
+            instanceAnnotations.Add(new ODataInstanceAnnotation("NS.Test2", new ODataPrimitiveValue(345)));
+            instanceAnnotations.Add(new ODataInstanceAnnotation("Core.ContentID", new ODataPrimitiveValue(1)));
+
+            ODataResourceBase odataResource = new ODataDeletedResource
+            {
+                Properties = new[]
+                {
+                    // declared properties
+                    new ODataProperty { Name = "CustomerId", Value = 991 },
+                    new ODataProperty { Name = "Name", Value = "Name #991" },
+                },
+                TypeName = typeof(SimpleOpenCustomer).FullName,
+
+                InstanceAnnotations = instanceAnnotations
+            };
+
+            ODataDeserializerContext readContext = new ODataDeserializerContext()
+            {
+                Model = model
+            };
+
+            ODataResourceWrapper topLevelResourceWrapper = new ODataResourceWrapper(odataResource);
+            var deletedEntity = new DeltaDeletedEntityObject<SimpleOpenCustomer>();
+
+            // Act
+            DeserializationHelpers.ApplyInstanceAnnotations(deletedEntity, customerTypeReference, topLevelResourceWrapper, _deserializerProvider, readContext);
+
+            // Assert
+
+            //Verify Instance Annotations
+            object value;
+            deletedEntity.TryGetPropertyValue("InstanceAnnotations", out value);
+            var persistentAnnotations = (value as IODataInstanceAnnotationContainer).GetResourceAnnotations();
+            var transientAnnotations = deletedEntity.TransientInstanceAnnotationContainer.GetResourceAnnotations();
+
+            Assert.Single(persistentAnnotations);
+            Assert.Single(transientAnnotations);
+
+            Assert.Equal("NS.Test2", persistentAnnotations.First().Key);
+            Assert.Equal("Core.ContentID", transientAnnotations.First().Key);
+            Assert.Equal(345, persistentAnnotations.First().Value);
+            Assert.Equal(1, transientAnnotations.First().Value);
         }
 
         [Fact]
@@ -378,7 +443,7 @@ namespace Microsoft.AspNet.OData.Test.Formatter.Deserialization
             // Assert
             Assert.Equal(HelpfulErrorMessage, exception.Message);
         }
-        
+
         [Fact]
         public void ApplyProperty_PassesWithCaseInsensitivePropertyName()
         {
@@ -508,6 +573,42 @@ namespace Microsoft.AspNet.OData.Test.Formatter.Deserialization
             Assert.Equal(expectedErrorMessage, exception.Message);
         }
 
+        [Theory]
+        [InlineData('\n', "\\n")]
+        [InlineData('\r', "\\r")]
+        [InlineData('\t', "\\t")]
+        [InlineData('\"', "\"")]
+        [InlineData('\\', "\\\\")]
+        [InlineData('\b', "\\b")]
+        [InlineData('\f', "\\f")]
+        public void ApplyProperty_UntypedValueOfTypeStringUnescaped(char token, string tokenEscaped)
+        {
+            // Arrange
+            var escapedValue = "\"Update of memo" + tokenEscaped + "4" + tokenEscaped + "40\"";
+            var propertyValue = new ODataUntypedValue { RawValue = escapedValue };
+            var property = new ODataProperty { Name = "Memo", Value = propertyValue };
+
+            EdmEntityType openType = new EdmEntityType("NS", "OpenType", null, false, true);
+            openType.AddKeys(openType.AddStructuralProperty("Id",
+                EdmLibHelpers.GetEdmPrimitiveTypeReferenceOrNull(typeof(int))));
+            EdmEntityTypeReference openTypeReference = new EdmEntityTypeReference(openType, isNullable: false);
+            ODataDeserializerProvider provider = ODataDeserializerProviderFactory.Create();
+
+            var resource = new OpenTypeTestClass();
+            var model = new EdmModel();
+            model.AddElement(openType);
+            model.SetAnnotationValue(openType, new DynamicPropertyDictionaryAnnotation(
+                typeof(OpenTypeTestClass).GetProperty("DynamicProperties")));
+
+            // Act
+            DeserializationHelpers.ApplyProperty(property, openTypeReference, resource, provider,
+                new ODataDeserializerContext { Model = model });
+
+            // Assert
+            Assert.True(resource.DynamicProperties.ContainsKey("Memo"));
+            Assert.Equal("Update of memo" + token + "4" + token + "40", resource.DynamicProperties["Memo"]);
+        }
+
         private static IEdmProperty GetMockEdmProperty(string name, EdmPrimitiveTypeKind elementType)
         {
             Mock<IEdmProperty> property = new Mock<IEdmProperty>();
@@ -618,6 +719,17 @@ namespace Microsoft.AspNet.OData.Test.Formatter.Deserialization
             {
                 throw new NotImplementedException();
             }
+        }
+
+        private class OpenTypeTestClass
+        {
+            public OpenTypeTestClass()
+            {
+                DynamicProperties = new Dictionary<string, object>();
+            }
+
+            public int Id { get; set; }
+            public IDictionary<string, object> DynamicProperties { get; set; }
         }
     }
 }

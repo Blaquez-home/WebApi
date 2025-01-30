@@ -1,8 +1,11 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="EdmDeltaEntityObject.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
-using System.Diagnostics.Contracts;
 using Microsoft.OData.Edm;
 
 namespace Microsoft.AspNet.OData
@@ -14,7 +17,6 @@ namespace Microsoft.AspNet.OData
     [NonValidatingParameterBinding]
     public class EdmDeltaEntityObject : EdmEntityObject, IEdmChangedObject
     {
-        private EdmDeltaType _edmType;
         private IEdmNavigationSource _navigationSource;
 
         /// <summary>
@@ -43,16 +45,14 @@ namespace Microsoft.AspNet.OData
         public EdmDeltaEntityObject(IEdmEntityType entityType, bool isNullable)
             : base(entityType, isNullable)
         {
-            _edmType = new EdmDeltaType(entityType, EdmDeltaEntityKind.Entry);
         }
 
         /// <inheritdoc />
-        public EdmDeltaEntityKind DeltaKind
+        public override EdmDeltaEntityKind DeltaKind
         {
             get
             {
-                Contract.Assert(_edmType != null);
-                return _edmType.DeltaKind;
+                return EdmDeltaEntityKind.Entry;
             }
         }
 

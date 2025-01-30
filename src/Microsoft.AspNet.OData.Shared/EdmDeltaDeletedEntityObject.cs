@@ -1,8 +1,11 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="EdmDeltaDeletedEntityObject.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
-using System.Diagnostics.Contracts;
 using Microsoft.OData;
 using Microsoft.OData.Edm;
 
@@ -17,7 +20,6 @@ namespace Microsoft.AspNet.OData
     {
         private string _id;
         private DeltaDeletedEntryReason _reason;
-        private EdmDeltaType _edmType;
         private IEdmNavigationSource _navigationSource;
 
         /// <summary>
@@ -46,7 +48,6 @@ namespace Microsoft.AspNet.OData
         public EdmDeltaDeletedEntityObject(IEdmEntityType entityType, bool isNullable)
             : base(entityType, isNullable)
         {
-            _edmType = new EdmDeltaType(entityType, EdmDeltaEntityKind.DeletedEntry);
         }
 
         /// <inheritdoc />
@@ -76,12 +77,11 @@ namespace Microsoft.AspNet.OData
         }
 
         /// <inheritdoc />
-        public EdmDeltaEntityKind DeltaKind
+        public override EdmDeltaEntityKind DeltaKind
         {
             get
             {
-                Contract.Assert(_edmType != null);
-                return _edmType.DeltaKind;
+                return EdmDeltaEntityKind.DeletedEntry;
             }
         }
 

@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="WebHostTestFixture.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 #if NETCORE
 using System;
@@ -31,6 +35,7 @@ using Microsoft.Owin.Hosting;
 using Microsoft.Test.E2E.AspNet.OData.Common.Extensions;
 using Owin;
 using Xunit;
+using AppFunc = System.Func<System.Collections.Generic.IDictionary<string, object>, System.Threading.Tasks.Task>;
 #endif
 
 // Parallelism in the test framework is a feature that is new for (Xunit) version 2. However,
@@ -136,6 +141,10 @@ namespace Microsoft.Test.E2E.AspNet.OData.Common.Execution
                                     .UseKestrel(options =>
                                     {
                                         options.Listen(IPAddress.Loopback, _port);
+
+                                        // After upgrading ODL version to 7.11.0,
+                                        // Some E2E tests failing with error "Synchronous operations are disallowed. Call WriteAsync or set AllowSynchronousIO to true instead."
+                                        options.AllowSynchronousIO = true;
                                     })
                                     .UseStartup<WebHostTestStartup>()
                                     .ConfigureServices(services =>
@@ -416,20 +425,21 @@ namespace Microsoft.Test.E2E.AspNet.OData.Common.Execution
         private void DefaultKatanaConfigure(IAppBuilder app)
         {
             // Set default principal to avoid OWIN selfhost bug with VS debugger
-            app.Use(async (context, next) =>
+            app.Use(new Func<AppFunc, AppFunc>(next => async env =>
             {
                 Thread.CurrentPrincipal = null;
-                await next();
-            });
+                await next.Invoke(env);
+            }));
+
+            WebHostLogExceptionFilter exceptionFilter = new WebHostLogExceptionFilter();
 
             // Inject error logging for 500.
-            WebHostLogExceptionFilter exceptionFilter = new WebHostLogExceptionFilter();
-            app.Use(async (context, next) =>
+            app.Use(new Func<AppFunc, AppFunc>(next => async env =>
             {
-                await next();
+                await next.Invoke(env);
 
                 int[] printExceptionFor = new int[] { 400, 500 };
-                if (printExceptionFor.Contains(context.Response.StatusCode) &&
+                if (printExceptionFor.Contains((int)env["owin.ResponseStatusCode"]) &&
                     exceptionFilter.Exceptions.Count > 0)
                 {
                     Console.WriteLine("**************** Internal Server Error ****************");
@@ -448,7 +458,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.Common.Execution
                     Console.WriteLine();
                     exceptionFilter.Exceptions.Clear();
                 }
-            });
+            }));
 
             var configuration = new WebRouteConfiguration();
             configuration.IncludeErrorDetailPolicy = IncludeErrorDetailPolicy.Always;

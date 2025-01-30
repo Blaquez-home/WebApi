@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="SelectExpandWrapperOfT.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using Newtonsoft.Json;
@@ -11,6 +15,9 @@ namespace Microsoft.AspNet.OData.Query.Expressions
     /// </summary>
     /// <typeparam name="TElement">The element being selected and expanded.</typeparam>
     [JsonConverter(typeof(SelectExpandWrapperConverter))]
+#if NETCOREAPP3_1_OR_GREATER
+    [System.Text.Json.Serialization.JsonConverter(typeof(SelectExpandWrapperJsonConverter))]
+#endif
     internal class SelectExpandWrapper<TElement> : SelectExpandWrapper
     {
         /// <summary>

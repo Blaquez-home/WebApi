@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="OrderByModelLimitationsValidator.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using Microsoft.AspNet.OData.Common;
 using Microsoft.AspNet.OData.Formatter;
@@ -124,6 +128,19 @@ namespace Microsoft.AspNet.OData.Query.Validators
 
         public override SingleValueNode Visit(NonResourceRangeVariableReferenceNode nodeIn)
         {
+            return null;
+        }
+
+        public override SingleValueNode Visit(SingleResourceCastNode nodeIn)
+        {
+            if (nodeIn.Source != null)
+            {
+                if (nodeIn.Source.Kind == QueryNodeKind.SingleComplexNode)
+                {
+                    return Visit((SingleComplexNode)nodeIn.Source);
+                }
+            }
+
             return null;
         }
 

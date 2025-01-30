@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="FilterQueryValidatorTest.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -300,6 +304,10 @@ namespace Microsoft.AspNet.OData.Test.Query.Validators
                     { AllowedFunctions.StartsWith, "startswith(null, 'Name')", "startswith" },
                     { AllowedFunctions.StartsWith, "startswith(ProductName,'Name')", "startswith" },
                     { AllowedFunctions.StartsWith, "startswith(ProductName, 'Name')", "startswith" },
+                    { AllowedFunctions.MatchesPattern, "matchesPattern(null,'Name')", "matchesPattern" },
+                    { AllowedFunctions.MatchesPattern, "matchesPattern(null, 'Name')", "matchesPattern" },
+                    { AllowedFunctions.MatchesPattern, "matchesPattern(ProductName,'Name')", "matchesPattern" },
+                    { AllowedFunctions.MatchesPattern, "matchesPattern(ProductName, 'Name')", "matchesPattern" },
                     { AllowedFunctions.Substring, "substring(null,1) eq 'Name'", "substring" },
                     { AllowedFunctions.Substring, "substring(null, 1) eq 'Name'", "substring" },
                     { AllowedFunctions.Substring, "substring(ProductName,1) eq 'Name'", "substring" },

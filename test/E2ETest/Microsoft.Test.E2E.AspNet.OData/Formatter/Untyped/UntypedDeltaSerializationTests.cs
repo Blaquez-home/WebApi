@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="UntypedDeltaSerializationTests.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System.Linq;
 using System.Net.Http;
@@ -23,7 +27,7 @@ namespace Microsoft.Test.E2E.AspNet.OData.Formatter.Untyped
     public class UntypedDeltaSerializationTests : WebHostTestBase
     {
         public UntypedDeltaSerializationTests(WebHostTestFixture fixture)
-            :base(fixture)
+            : base(fixture)
         {
         }
 
@@ -50,6 +54,11 @@ namespace Microsoft.Test.E2E.AspNet.OData.Formatter.Untyped
         {
             string url = "/untyped/UntypedDeltaCustomers?$deltatoken=abc";
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, BaseAddress + url);
+
+            // By default, the odata version is 4.0. It will throw:
+            // "Cannot transition from state 'DeletedResource' to state 'NestedResourceInfo' when writing an OData 4.0 payload.
+            // To write content to a deleted resource, please specify ODataVersion 4.01 or greater in MessageWriterSettings."
+            request.Headers.Add("OData-Version", "4.01");
             request.Headers.Accept.Add(MediaTypeWithQualityHeaderValue.Parse(acceptHeader));
             HttpResponseMessage response = await Client.SendAsync(request);
             Assert.True(response.IsSuccessStatusCode);
@@ -58,17 +67,15 @@ namespace Microsoft.Test.E2E.AspNet.OData.Formatter.Untyped
             Assert.True(((dynamic)returnedObject).value.Count == 15);
 
             //Verification of content to validate Payload
-            for (int i = 0 ; i < 10 ; i++)
+            for (int i = 0; i < 10; i++)
             {
                 string name = string.Format("Name {0}", i);
                 Assert.True(name.Equals(((dynamic)returnedObject).value[i]["Name"].Value));
             }
 
-            for (int i=10 ; i < 15 ; i++)
+            for (int i = 10; i < 15; i++)
             {
-                string contextUrl = BaseAddress.ToLowerInvariant() + "/untyped/$metadata#UntypedDeltaCustomers/$deletedEntity";
-                Assert.True(contextUrl.Equals(((dynamic)returnedObject).value[i]["@odata.context"].Value));
-                Assert.True(i.ToString().Equals(((dynamic)returnedObject).value[i]["id"].Value));
+                Assert.True(i.ToString().Equals(((dynamic)returnedObject).value[i]["@id"].Value));
             }
         }
     }

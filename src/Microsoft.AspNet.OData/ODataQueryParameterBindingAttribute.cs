@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="ODataQueryParameterBindingAttribute.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Diagnostics.CodeAnalysis;
@@ -85,6 +89,9 @@ namespace Microsoft.AspNet.OData
 
                 ODataQueryOptions parameterValue = createODataQueryOptions(entitySetContext, request);
                 SetValue(actionContext, parameterValue);
+
+                // Make sure the instance is saved on the request so it can be used later instead of reparsing.
+                request.SetODataQueryOptions(parameterValue);
 
                 return TaskHelpers.Completed();
             }

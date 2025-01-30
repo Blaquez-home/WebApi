@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="ODataEntityReferenceLinkDeserializer.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -73,7 +77,7 @@ namespace Microsoft.AspNet.OData.Formatter.Deserialization
             if (uri != null)
             {
                 IDictionary<string, string> contentIDToLocationMapping = readContext.InternalRequest.ODataContentIdMapping;
-                if (contentIDToLocationMapping != null)
+                if (contentIDToLocationMapping != null && contentIDToLocationMapping.Count > 0)
                 {
                     Uri baseAddress = new Uri(readContext.InternalUrlHelper.CreateODataLink());
                     string relativeUrl = uri.IsAbsoluteUri ? baseAddress.MakeRelativeUri(uri).OriginalString : uri.OriginalString;

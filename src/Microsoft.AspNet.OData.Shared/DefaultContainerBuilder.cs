@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="DefaultContainerBuilder.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Reflection;
@@ -79,15 +83,26 @@ namespace Microsoft.AspNet.OData
         /// <returns>The container built by this builder.</returns>
         public virtual IServiceProvider BuildContainer()
         {
-            /* "services.BuildServiceProvider()" returns IServiceProvider in Microsoft.Extensions.DependencyInjection 1.0 and ServiceProvider in Microsoft.Extensions.DependencyInjection 2.0
-            * (This is a breaking change)[https://github.com/aspnet/DependencyInjection/issues/550].
-            * To support both versions with the same code base in OData/WebAPI we decided to call that extension method using reflection.
-            * More info at https://github.com/OData/WebApi/pull/1082
-            */
+            try
+            {
+                // On .NET Framework platform, if using Microsoft.Extensions.DependencyInjection > 6.x version,
+                // The runtime throws exception directly when calling BuildContainer if we call 'services.BuildServiceProvider()' within it.
+                // So, wrap 'services.BuildServiceProvider()' into a private method call, we can catch the runtime exception directly				
+                return BuildServiceProviderImpl();
+            }
+            catch
+            {
+                MethodInfo buildServiceProviderMethod =
+                    typeof(ServiceCollectionContainerBuilderExtensions)
+                    .GetMethod(nameof(ServiceCollectionContainerBuilderExtensions.BuildServiceProvider), new[] { typeof(IServiceCollection) });
 
-            MethodInfo buildServiceProviderMethod = typeof(ServiceCollectionContainerBuilderExtensions).GetMethod(nameof(ServiceCollectionContainerBuilderExtensions.BuildServiceProvider), new[] { typeof(IServiceCollection) });
+                return (IServiceProvider)buildServiceProviderMethod.Invoke(null, new object[] { services });
+            }
+        }
 
-            return (IServiceProvider)buildServiceProviderMethod.Invoke(null, new object[] { services });
+        private IServiceProvider BuildServiceProviderImpl()
+        {
+            return services.BuildServiceProvider();
         }
 
         private static Microsoft.Extensions.DependencyInjection.ServiceLifetime TranslateServiceLifetime(

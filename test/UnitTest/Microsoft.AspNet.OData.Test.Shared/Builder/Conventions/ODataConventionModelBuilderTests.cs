@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="ODataConventionModelBuilderTests.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -26,7 +30,7 @@ namespace Microsoft.AspNet.OData.Test.Builder.Conventions
 {
     public class ODataConventionModelBuilderTests
     {
-        private const int _totalExpectedSchemaTypesForVehiclesModel = 10;
+        private const int _totalExpectedSchemaTypesForVehiclesModel = 19;
 
         [Fact]
         public void Ctor_ThrowsForNullConfiguration()
@@ -615,7 +619,7 @@ namespace Microsoft.AspNet.OData.Test.Builder.Conventions
             var motorcycle = model.AssertHasEntityType(typeof(Motorcycle));
             Assert.Equal(vehicle, motorcycle.BaseEntityType());
             Assert.Equal(2, motorcycle.Key().Count());
-            Assert.Equal(5, motorcycle.Properties().Count());
+            Assert.Equal(7, motorcycle.Properties().Count());
             motorcycle.AssertHasPrimitiveProperty(model, "CanDoAWheelie", EdmPrimitiveTypeKind.Boolean, isNullable: false);
             motorcycle.AssertHasNavigationProperty(model, "Manufacturer", typeof(MotorcycleManufacturer), isNullable: true, multiplicity: EdmMultiplicity.ZeroOrOne);
 
@@ -629,7 +633,7 @@ namespace Microsoft.AspNet.OData.Test.Builder.Conventions
             var sportbike = model.AssertHasEntityType(typeof(SportBike));
             Assert.Equal(motorcycle, sportbike.BaseEntityType());
             Assert.Equal(2, sportbike.Key().Count());
-            Assert.Equal(5, sportbike.Properties().Count());
+            Assert.Equal(7, sportbike.Properties().Count());
 
             model.AssertHasEntityType(typeof(MotorcycleManufacturer));
             model.AssertHasEntityType(typeof(CarManufacturer));
@@ -658,7 +662,7 @@ namespace Microsoft.AspNet.OData.Test.Builder.Conventions
             IEdmModel model = builder.GetEdmModel();
 
             // ignore motorcycle, sportbike and MotorcycleManufacturer
-            Assert.Equal(_totalExpectedSchemaTypesForVehiclesModel - 3, model.SchemaElements.Count());
+            Assert.Equal(_totalExpectedSchemaTypesForVehiclesModel - 12, model.SchemaElements.Count());
             Assert.Single(model.EntityContainer.EntitySets());
             model.AssertHasEntitySet("Vehicles", typeof(Vehicle));
 
@@ -708,7 +712,7 @@ namespace Microsoft.AspNet.OData.Test.Builder.Conventions
             var sportbike = model.AssertHasEntityType(typeof(SportBike));
             Assert.Equal(vehicle, sportbike.BaseEntityType());
             Assert.Equal(2, sportbike.Key().Count());
-            Assert.Equal(5, sportbike.Properties().Count());
+            Assert.Equal(7, sportbike.Properties().Count());
             sportbike.AssertHasNavigationProperty(model, "Manufacturer", typeof(MotorcycleManufacturer), isNullable: true, multiplicity: EdmMultiplicity.ZeroOrOne);
         }
 
@@ -764,7 +768,7 @@ namespace Microsoft.AspNet.OData.Test.Builder.Conventions
             var motorcycle = model.AssertHasEntityType(typeof(Motorcycle));
             Assert.Null(motorcycle.BaseEntityType());
             Assert.Equal(2, motorcycle.Key().Count());
-            Assert.Equal(5, motorcycle.Properties().Count());
+            Assert.Equal(7, motorcycle.Properties().Count());
 
             var car = model.AssertHasEntityType(typeof(Car));
             Assert.Null(car.BaseEntityType());
@@ -774,7 +778,7 @@ namespace Microsoft.AspNet.OData.Test.Builder.Conventions
             var sportbike = model.AssertHasEntityType(typeof(SportBike));
             Assert.Equal(motorcycle, sportbike.BaseEntityType());
             Assert.Equal(2, sportbike.Key().Count());
-            Assert.Equal(5, sportbike.Properties().Count());
+            Assert.Equal(7, sportbike.Properties().Count());
         }
 
         [Fact]
@@ -2368,6 +2372,30 @@ namespace Microsoft.AspNet.OData.Test.Builder.Conventions
             IEdmEntityType entity = model.AssertHasEntitySet("entityset", entityType);
             entity.AssertHasKey(model, "ID", EdmPrimitiveTypeKind.Int32);
             entity.AssertHasNavigationProperty(model, "NavigationCollection", new { ID = default(int) }.GetType(), isNullable: false, multiplicity: EdmMultiplicity.Many);
+        }
+
+        public class TypeContainsODataIdContainer
+        {
+            public int Id { get; set; }
+            public string Name { get; set; }
+            public ODataIdContainer Container { get; set; }
+            public IList<ODataIdContainer> Containers { get; set; }
+        }
+
+        [Fact]
+        public void CanBuildModel_OmitODataIdContainerProperties()
+        {
+            var configuration = RoutingConfigurationFactory.Create();
+            ODataConventionModelBuilder builder = ODataConventionModelBuilderFactory.Create(configuration, isQueryCompositionMode: true);
+            builder.EntityType<TypeContainsODataIdContainer>();
+
+            IEdmModel model = builder.GetEdmModel();
+
+            IEdmEntityType entity = model.AssertHasEntityType(typeof(TypeContainsODataIdContainer));
+
+            Assert.Equal(2, entity.Properties().Count());
+            entity.AssertHasKey(model, "Id", EdmPrimitiveTypeKind.Int32);
+            entity.AssertHasPrimitiveProperty(model, "Name", EdmPrimitiveTypeKind.String, true);
         }
 
         [Theory]

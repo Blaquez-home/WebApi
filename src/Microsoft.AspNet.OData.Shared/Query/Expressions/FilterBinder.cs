@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="FilterBinder.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using System;
 using System.Collections;
@@ -940,7 +944,9 @@ namespace Microsoft.AspNet.OData.Query.Expressions
             foreach (RangeVariable rangeVariable in rangeVariables)
             {
                 ParameterExpression parameter;
-                if (!_lambdaParameters.TryGetValue(rangeVariable.Name, out parameter))
+
+                // Create a Parameter Expression for rangeVariables which are not $it Lambda parameters or $this.
+                if (!_lambdaParameters.TryGetValue(rangeVariable.Name, out parameter) && rangeVariable.Name != ODataThisParameterName)
                 {
                     // Work-around issue 481323 where UriParser yields a collection parameter type
                     // for primitive collections rather than the inner element type of the collection.

@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="QueryableLimitationTest.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 #if NETCORE
 using System;
@@ -106,7 +110,7 @@ namespace Microsoft.AspNet.OData.Test
         </Key>
         <Property Name=""Id"" Type=""Edm.Int32"" Nullable=""false"" />
         <Property Name=""OrderName"" Type=""Edm.String"" />
-        <Property Name=""OrderValue"" Type=""Edm.Decimal"" Nullable=""false"" />
+        <Property Name=""OrderValue"" Type=""Edm.Decimal"" Nullable=""false"" Scale=""Variable"" />
       </EntityType>
       <EntityType Name=""DerivedQueryLimitCustomer"" BaseType=""Microsoft.AspNet.OData.Test.QueryLimitCustomer"">
         <Property Name=""DerivedName"" Type=""Edm.String"" />

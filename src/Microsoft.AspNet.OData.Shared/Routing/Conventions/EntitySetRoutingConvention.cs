@@ -1,5 +1,9 @@
-﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
-// Licensed under the MIT License.  See License.txt in the project root for license information.
+//-----------------------------------------------------------------------------
+// <copyright file="EntitySetRoutingConvention.cs" company=".NET Foundation">
+//      Copyright (c) .NET Foundation and Contributors. All rights reserved. 
+//      See License.txt in the project root for license information.
+// </copyright>
+//------------------------------------------------------------------------------
 
 using Microsoft.AspNet.OData.Interfaces;
 using Microsoft.OData.Edm;
@@ -41,6 +45,13 @@ namespace Microsoft.AspNet.OData.Routing.Conventions
                     return actionMap.FindMatchingAction(
                         "Post" + entitySet.EntityType().Name,
                         "Post");
+                }
+                else if (ODataRequestMethod.Patch == controllerContext.Request.Method)
+                {
+                    // e.g. Try PatchCustomers first, then fall back to Patch action name
+                    return actionMap.FindMatchingAction(
+                        "Patch" + entitySet.Name,
+                        "Patch");
                 }
             }
             else if (odataPath.PathTemplate == "~/entityset/$count" &&
