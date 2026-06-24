@@ -10,7 +10,9 @@ variables:
   value: none
 - name: ProductBinPath
   value: $(Build.SourcesDirectory)\bin\$(BuildConfiguration)
-- group: OData-ESRP-CodeSigning
+- group: OData-Shared
+- name: AZURE_ARTIFACTS_FEED
+  value: "$(ODataFeed)"
 
 schedules:
 - cron: 0 3 * * 1,2,3,4,5
@@ -57,11 +59,10 @@ extends:
         steps:
         - checkout: self
         - template: pipelines/task-group-policheck-v1.yml@self
-        - task: NuGetToolInstaller@1
-          displayName: Use NuGet >=5.8.0
-          inputs:
-            versionSpec: '>=5.8.0'
-            checkLatest: true
+
+        - task: NuGetAuthenticate@1
+          displayName: 'Authenticate to the feed'
+          
         - task: UseDotNet@2
           displayName: Use .NET Core sdk 2.x
           inputs:
@@ -75,6 +76,8 @@ extends:
           inputs:
             command: 'restore'
             solution: sln/WebApiOData.AspNet.sln;sln/WebApiOData.AspNetCore.sln;sln/WebApiOData.E2E.AspNet.sln;sln/WebApiOData.E2E.AspNetCore.sln
+            feedsToUse: 'config'
+            nugetConfigPath: 'sln/.nuget/NuGet.Config'
         - task: VSBuild@1
           displayName: Build solution sln\WebApiOData.AspNet.sln
           inputs:
