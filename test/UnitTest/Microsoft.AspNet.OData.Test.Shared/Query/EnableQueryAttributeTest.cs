@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using Microsoft.AspNet.OData.Builder;
 using Microsoft.AspNet.OData.Extensions;
 using Microsoft.AspNet.OData.Query;
 using Microsoft.AspNet.OData.Routing;
@@ -23,6 +24,7 @@ using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.OData;
 using Microsoft.OData.Edm;
 using Xunit;
@@ -340,6 +342,778 @@ namespace Microsoft.AspNet.OData.Test.Query
         {
             ExceptionAssert.ThrowsArgumentNull(() => new EnableQueryAttribute().OnActionExecuting(null), "context");
         }
+
+        #region Query validation error logging (opt-in diagnostics)
+
+        [Fact]
+        public void EnableQueryValidationErrorLogging_DefaultsToFalse()
+        {
+            // Arrange & Act
+            var attribute = new EnableQueryAttribute();
+
+            // Assert
+            Assert.False(attribute.EnableQueryValidationErrorLogging);
+        }
+
+        [Fact]
+        public void OnActionExecuting_LoggingEnabled_UnknownSelect_WritesDiagnostic()
+        {
+            // Arrange
+            var loggerProvider = new CapturingLoggerProvider();
+            var attribute = new EnableQueryAttribute { EnableQueryValidationErrorLogging = true };
+            var context = CreateQueryValidationActionExecutingContext("?$select=NoSuchProperty", BuildLoggerServices(loggerProvider));
+
+            // Act
+            attribute.OnActionExecuting(context);
+
+            // Assert
+            Assert.IsType<BadRequestObjectResult>(context.Result);
+            var entry = Assert.Single(loggerProvider.Entries);
+            Assert.Equal(LogLevel.Warning, entry.Level);
+            Assert.Equal(typeof(EnableQueryAttribute).FullName, entry.Category);
+            Assert.Contains("Customer", entry.GetFieldValue("QueryType"));
+            Assert.Equal("$select=NoSuchProperty", entry.GetFieldValue("QueryOptions"));
+            Assert.Contains("NoSuchProperty", entry.GetFieldValue("Reason"));
+            Assert.NotNull(entry.Exception);
+            Assert.Contains("NoSuchProperty", entry.Exception.Message);
+        }
+
+        [Fact]
+        public void OnActionExecuting_LoggingEnabled_UnknownExpand_WritesDiagnostic()
+        {
+            // Arrange
+            var loggerProvider = new CapturingLoggerProvider();
+            var attribute = new EnableQueryAttribute { EnableQueryValidationErrorLogging = true };
+            var context = CreateQueryValidationActionExecutingContext("?$expand=NoSuchNavigation", BuildLoggerServices(loggerProvider));
+
+            // Act
+            attribute.OnActionExecuting(context);
+
+            // Assert
+            Assert.IsType<BadRequestObjectResult>(context.Result);
+            var entry = Assert.Single(loggerProvider.Entries);
+            Assert.Equal(LogLevel.Warning, entry.Level);
+            Assert.Equal("$expand=NoSuchNavigation", entry.GetFieldValue("QueryOptions"));
+            Assert.Contains("NoSuchNavigation", entry.GetFieldValue("Reason"));
+            Assert.NotNull(entry.Exception);
+        }
+
+        [Fact]
+        public void OnActionExecuting_LoggingEnabled_ReportsFullRequestedSelectSet()
+        {
+            // Arrange
+            var loggerProvider = new CapturingLoggerProvider();
+            var attribute = new EnableQueryAttribute { EnableQueryValidationErrorLogging = true };
+            var context = CreateQueryValidationActionExecutingContext("?$select=Name,NoSuchProperty", BuildLoggerServices(loggerProvider));
+
+            // Act
+            attribute.OnActionExecuting(context);
+
+            // Assert
+            Assert.IsType<BadRequestObjectResult>(context.Result);
+            var entry = Assert.Single(loggerProvider.Entries);
+            Assert.Equal("$select=Name,NoSuchProperty", entry.GetFieldValue("QueryOptions"));
+        }
+
+        [Fact]
+        public void OnActionExecuting_LoggingEnabled_UnknownExpandWithSelect_ReportsCombinedQueryOptions()
+        {
+            // Arrange
+            var loggerProvider = new CapturingLoggerProvider();
+            var attribute = new EnableQueryAttribute { EnableQueryValidationErrorLogging = true };
+            var context = CreateQueryValidationActionExecutingContext("?$select=Name&$expand=NoSuchNavigation", BuildLoggerServices(loggerProvider));
+
+            // Act
+            attribute.OnActionExecuting(context);
+
+            // Assert
+            Assert.IsType<BadRequestObjectResult>(context.Result);
+            var entry = Assert.Single(loggerProvider.Entries);
+            Assert.Equal("$select=Name&$expand=NoSuchNavigation", entry.GetFieldValue("QueryOptions"));
+            Assert.Contains("NoSuchNavigation", entry.GetFieldValue("Reason"));
+        }
+
+        [Fact]
+        public void OnActionExecuting_LoggingEnabled_NestedExpandSelect_UnknownProperty_WritesDiagnostic()
+        {
+            // Arrange
+            var loggerProvider = new CapturingLoggerProvider();
+            var attribute = new EnableQueryAttribute { EnableQueryValidationErrorLogging = true };
+            var context = CreateQueryValidationActionExecutingContext(
+                "?$expand=Orders($select=NoSuchOrderProperty)",
+                BuildLoggerServices(loggerProvider),
+                collectionEndpoint: true,
+                model: GetLoggingCustomerOrdersModel());
+
+            // Act
+            attribute.OnActionExecuting(context);
+
+            // Assert
+            Assert.IsType<BadRequestObjectResult>(context.Result);
+            var entry = Assert.Single(loggerProvider.Entries);
+            Assert.Equal(LogLevel.Warning, entry.Level);
+            Assert.Equal("odata/Customers", entry.GetFieldValue("Endpoint"));
+            Assert.Equal("$expand=Orders($select=NoSuchOrderProperty)", entry.GetFieldValue("QueryOptions"));
+            Assert.Contains("NoSuchOrderProperty", entry.GetFieldValue("Reason"));
+            Assert.NotNull(entry.Exception);
+        }
+
+        [Fact]
+        public void OnActionExecuting_LoggingEnabled_NestedExpandFilter_UnknownProperty_WritesDiagnostic()
+        {
+            // Arrange
+            var loggerProvider = new CapturingLoggerProvider();
+            var attribute = new EnableQueryAttribute { EnableQueryValidationErrorLogging = true };
+            var context = CreateQueryValidationActionExecutingContext(
+                "?$expand=Orders($filter=NoSuchOrderProperty eq 1)",
+                BuildLoggerServices(loggerProvider),
+                collectionEndpoint: true,
+                model: GetLoggingCustomerOrdersModel());
+
+            // Act
+            attribute.OnActionExecuting(context);
+
+            // Assert
+            Assert.IsType<BadRequestObjectResult>(context.Result);
+            var entry = Assert.Single(loggerProvider.Entries);
+            Assert.Equal("odata/Customers", entry.GetFieldValue("Endpoint"));
+            Assert.Equal("$expand=Orders($filter=NoSuchOrderProperty eq 1)", entry.GetFieldValue("QueryOptions"));
+            Assert.Contains("NoSuchOrderProperty", entry.GetFieldValue("Reason"));
+            Assert.NotNull(entry.Exception);
+        }
+
+        [Fact]
+        public void OnActionExecuting_LoggingEnabled_AnyLambdaFilter_UnknownProperty_WritesDiagnostic()
+        {
+            // Arrange
+            var loggerProvider = new CapturingLoggerProvider();
+            var attribute = new EnableQueryAttribute { EnableQueryValidationErrorLogging = true };
+            var context = CreateQueryValidationActionExecutingContext(
+                "?$filter=Orders/any(o: o/NoSuchOrderProperty eq 1)",
+                BuildLoggerServices(loggerProvider),
+                collectionEndpoint: true,
+                model: GetLoggingCustomerOrdersModel());
+
+            // Act
+            attribute.OnActionExecuting(context);
+
+            // Assert
+            Assert.IsType<BadRequestObjectResult>(context.Result);
+            var entry = Assert.Single(loggerProvider.Entries);
+            Assert.Equal("odata/Customers", entry.GetFieldValue("Endpoint"));
+            Assert.Contains("NoSuchOrderProperty", entry.GetFieldValue("Reason"));
+            Assert.NotNull(entry.Exception);
+        }
+
+        [Fact]
+        public void OnActionExecuting_LoggingEnabled_AllLambdaFilter_UnknownProperty_WritesDiagnostic()
+        {
+            // Arrange
+            var loggerProvider = new CapturingLoggerProvider();
+            var attribute = new EnableQueryAttribute { EnableQueryValidationErrorLogging = true };
+            var context = CreateQueryValidationActionExecutingContext(
+                "?$filter=Orders/all(o: o/NoSuchOrderProperty eq 1)",
+                BuildLoggerServices(loggerProvider),
+                collectionEndpoint: true,
+                model: GetLoggingCustomerOrdersModel());
+
+            // Act
+            attribute.OnActionExecuting(context);
+
+            // Assert
+            Assert.IsType<BadRequestObjectResult>(context.Result);
+            var entry = Assert.Single(loggerProvider.Entries);
+            Assert.Equal("odata/Customers", entry.GetFieldValue("Endpoint"));
+            Assert.Contains("NoSuchOrderProperty", entry.GetFieldValue("Reason"));
+            Assert.NotNull(entry.Exception);
+        }
+
+#if !NETCOREAPP2_1
+        [Fact]
+        public void OnActionExecuting_LoggingEnabled_RoutedEndpoint_ReportsRouteTemplate()
+        {
+            // Arrange
+            var loggerProvider = new CapturingLoggerProvider();
+            var attribute = new EnableQueryAttribute { EnableQueryValidationErrorLogging = true };
+            var endpoint = new RouteEndpoint(
+                ctx => System.Threading.Tasks.Task.CompletedTask,
+                Microsoft.AspNetCore.Routing.Patterns.RoutePatternFactory.Parse("odata/Customers({key})"),
+                order: 0,
+                metadata: EndpointMetadataCollection.Empty,
+                displayName: "Customers");
+            var context = CreateQueryValidationActionExecutingContext("?$select=NoSuchProperty", BuildLoggerServices(loggerProvider), endpoint);
+
+            // Act
+            attribute.OnActionExecuting(context);
+
+            // Assert
+            Assert.IsType<BadRequestObjectResult>(context.Result);
+            var entry = Assert.Single(loggerProvider.Entries);
+            Assert.Equal("odata/Customers({key})", entry.GetFieldValue("Endpoint"));
+        }
+#endif
+
+#if NETCOREAPP2_1
+        [Fact]
+        public void OnActionExecuting_LoggingEnabled_RoutedEndpoint_ReportsRouteTemplate()
+        {
+            // Arrange
+            var loggerProvider = new CapturingLoggerProvider();
+            var attribute = new EnableQueryAttribute { EnableQueryValidationErrorLogging = true };
+            var context = CreateQueryValidationActionExecutingContext("?$select=NoSuchProperty", BuildLoggerServices(loggerProvider), routedEndpoint: true);
+
+            // Act
+            attribute.OnActionExecuting(context);
+
+            // Assert
+            Assert.IsType<BadRequestObjectResult>(context.Result);
+            var entry = Assert.Single(loggerProvider.Entries);
+            Assert.Equal("odata/Customers({key})", entry.GetFieldValue("Endpoint"));
+        }
+#endif
+
+#if !NETCOREAPP2_1
+        [Fact]
+        public void OnActionExecuting_LoggingEnabled_NavigationAfterKey_ReportsRouteTemplate()
+        {
+            // Arrange
+            var loggerProvider = new CapturingLoggerProvider();
+            var attribute = new EnableQueryAttribute { EnableQueryValidationErrorLogging = true };
+            var endpoint = new RouteEndpoint(
+                ctx => System.Threading.Tasks.Task.CompletedTask,
+                Microsoft.AspNetCore.Routing.Patterns.RoutePatternFactory.Parse("odata/Customers({key})/Orders"),
+                order: 0,
+                metadata: EndpointMetadataCollection.Empty,
+                displayName: "CustomerOrders");
+            var context = CreateQueryValidationActionExecutingContext("?$select=NoSuchProperty", BuildLoggerServices(loggerProvider), endpoint);
+
+            // Act
+            attribute.OnActionExecuting(context);
+
+            // Assert
+            Assert.IsType<BadRequestObjectResult>(context.Result);
+            var entry = Assert.Single(loggerProvider.Entries);
+            Assert.Equal("odata/Customers({key})/Orders", entry.GetFieldValue("Endpoint"));
+        }
+#endif
+
+#if NETCOREAPP2_1
+        [Fact]
+        public void OnActionExecuting_LoggingEnabled_NavigationAfterKey_ReportsRouteTemplate()
+        {
+            // Arrange
+            var loggerProvider = new CapturingLoggerProvider();
+            var attribute = new EnableQueryAttribute { EnableQueryValidationErrorLogging = true };
+            var model = GetLoggingCustomerOrdersModel();
+            var context = CreateQueryValidationActionExecutingContext("?$select=NoSuchProperty", BuildLoggerServices(loggerProvider), model: model);
+            var odataFeature = context.HttpContext.ODataFeature();
+            odataFeature.Path = BuildCustomersOrdersPath(model, includeOrderKey: false);
+            odataFeature.RoutePrefix = "odata";
+
+            // Act
+            attribute.OnActionExecuting(context);
+
+            // Assert
+            Assert.IsType<BadRequestObjectResult>(context.Result);
+            var entry = Assert.Single(loggerProvider.Entries);
+            Assert.Equal("odata/Customers({key})/Orders", entry.GetFieldValue("Endpoint"));
+        }
+
+        [Fact]
+        public void OnActionExecuting_LoggingEnabled_KeyOnNavigation_ReportsRouteTemplate()
+        {
+            // Arrange
+            var loggerProvider = new CapturingLoggerProvider();
+            var attribute = new EnableQueryAttribute { EnableQueryValidationErrorLogging = true };
+            var model = GetLoggingCustomerOrdersModel();
+            var context = CreateQueryValidationActionExecutingContext("?$select=NoSuchProperty", BuildLoggerServices(loggerProvider), model: model);
+            var odataFeature = context.HttpContext.ODataFeature();
+            odataFeature.Path = BuildCustomersOrdersPath(model, includeOrderKey: true);
+            odataFeature.RoutePrefix = "odata";
+
+            // Act
+            attribute.OnActionExecuting(context);
+
+            // Assert
+            Assert.IsType<BadRequestObjectResult>(context.Result);
+            var entry = Assert.Single(loggerProvider.Entries);
+            Assert.Equal("odata/Customers({key})/Orders({key})", entry.GetFieldValue("Endpoint"));
+        }
+
+        [Fact]
+        public void OnActionExecuting_LoggingEnabled_NoRoutePrefix_ReportsRouteTemplate()
+        {
+            // Arrange
+            var loggerProvider = new CapturingLoggerProvider();
+            var attribute = new EnableQueryAttribute { EnableQueryValidationErrorLogging = true };
+            var model = GetLoggingCustomerOrdersModel();
+            var context = CreateQueryValidationActionExecutingContext("?$select=NoSuchProperty", BuildLoggerServices(loggerProvider), model: model);
+            var odataFeature = context.HttpContext.ODataFeature();
+            odataFeature.Path = BuildCustomersOrdersPath(model, includeOrderKey: false);
+            odataFeature.RoutePrefix = null;
+
+            // Act
+            attribute.OnActionExecuting(context);
+
+            // Assert
+            Assert.IsType<BadRequestObjectResult>(context.Result);
+            var entry = Assert.Single(loggerProvider.Entries);
+            Assert.Equal("Customers({key})/Orders", entry.GetFieldValue("Endpoint"));
+        }
+#endif
+
+        [Fact]
+        public void OnActionExecuting_DefaultConfiguration_WritesNothing()
+        {
+            // Arrange
+            var loggerProvider = new CapturingLoggerProvider();
+            var attribute = new EnableQueryAttribute();
+            var context = CreateQueryValidationActionExecutingContext("?$select=NoSuchProperty", BuildLoggerServices(loggerProvider));
+
+            // Act
+            attribute.OnActionExecuting(context);
+
+            // Assert
+            Assert.IsType<BadRequestObjectResult>(context.Result);
+            Assert.Empty(loggerProvider.Entries);
+        }
+
+        [Fact]
+        public void OnActionExecuting_GlobalOptionEnabled_WritesDiagnostic()
+        {
+            // Arrange
+            var loggerProvider = new CapturingLoggerProvider();
+            var attribute = new EnableQueryAttribute();
+            var context = CreateQueryValidationActionExecutingContext(
+                "?$select=NoSuchProperty",
+                BuildLoggerServicesWithGlobalOption(loggerProvider, globalEnable: true));
+
+            // Act
+            attribute.OnActionExecuting(context);
+
+            // Assert
+            Assert.IsType<BadRequestObjectResult>(context.Result);
+            var entry = Assert.Single(loggerProvider.Entries);
+            Assert.Equal(LogLevel.Warning, entry.Level);
+            Assert.Contains("NoSuchProperty", entry.GetFieldValue("Reason"));
+        }
+
+        [Fact]
+        public void OnActionExecuting_GlobalEnabled_AttributeOptOut_WritesNothing()
+        {
+            // Arrange
+            var loggerProvider = new CapturingLoggerProvider();
+            var attribute = new EnableQueryAttribute { EnableQueryValidationErrorLogging = false };
+            var context = CreateQueryValidationActionExecutingContext(
+                "?$select=NoSuchProperty",
+                BuildLoggerServicesWithGlobalOption(loggerProvider, globalEnable: true));
+
+            // Act
+            attribute.OnActionExecuting(context);
+
+            // Assert
+            Assert.IsType<BadRequestObjectResult>(context.Result);
+            Assert.Empty(loggerProvider.Entries);
+        }
+
+        [Fact]
+        public void OnActionExecuting_GlobalDisabled_AttributeEnabled_WritesDiagnostic()
+        {
+            // Arrange
+            var loggerProvider = new CapturingLoggerProvider();
+            var attribute = new EnableQueryAttribute { EnableQueryValidationErrorLogging = true };
+            var context = CreateQueryValidationActionExecutingContext(
+                "?$select=NoSuchProperty",
+                BuildLoggerServicesWithGlobalOption(loggerProvider, globalEnable: false));
+
+            // Act
+            attribute.OnActionExecuting(context);
+
+            // Assert
+            Assert.IsType<BadRequestObjectResult>(context.Result);
+            Assert.Single(loggerProvider.Entries);
+        }
+
+        [Fact]
+        public void OnActionExecuting_AttributeDisabled_WritesNothing()
+        {
+            // Arrange
+            var loggerProvider = new CapturingLoggerProvider();
+            var attribute = new EnableQueryAttribute { EnableQueryValidationErrorLogging = false };
+            var context = CreateQueryValidationActionExecutingContext("?$select=NoSuchProperty", BuildLoggerServices(loggerProvider));
+
+            // Act
+            attribute.OnActionExecuting(context);
+
+            // Assert
+            Assert.IsType<BadRequestObjectResult>(context.Result);
+            Assert.Empty(loggerProvider.Entries);
+        }
+
+        [Fact]
+        public void OnActionExecuting_LoggingEnabled_ValidSelect_WritesNothing()
+        {
+            // Arrange
+            var loggerProvider = new CapturingLoggerProvider();
+            var attribute = new EnableQueryAttribute { EnableQueryValidationErrorLogging = true };
+            var context = CreateQueryValidationActionExecutingContext("?$select=Name", BuildLoggerServices(loggerProvider));
+
+            // Act
+            attribute.OnActionExecuting(context);
+
+            // Assert
+            Assert.Null(context.Result);
+            Assert.Empty(loggerProvider.Entries);
+        }
+
+        [Fact]
+        public void OnActionExecuting_LoggingEnabled_NoQueryOptions_WritesNothing()
+        {
+            // Arrange
+            var loggerProvider = new CapturingLoggerProvider();
+            var attribute = new EnableQueryAttribute { EnableQueryValidationErrorLogging = true };
+            var context = CreateQueryValidationActionExecutingContext(string.Empty, BuildLoggerServices(loggerProvider));
+
+            // Act
+            attribute.OnActionExecuting(context);
+
+            // Assert
+            Assert.Null(context.Result);
+            Assert.Empty(loggerProvider.Entries);
+        }
+
+        [Fact]
+        public void OnActionExecuting_LoggingEnabled_NoLoggerRegistered_DoesNotThrow_AndReturnsBadRequest()
+        {
+            // Arrange
+            var services = new ServiceCollection();
+            services.AddSingleton(new ODataOptions());
+            IServiceProvider requestServices = services.BuildServiceProvider();
+            var attribute = new EnableQueryAttribute { EnableQueryValidationErrorLogging = true };
+            var context = CreateQueryValidationActionExecutingContext("?$select=NoSuchProperty", requestServices);
+
+            // Act & Assert
+            ExceptionAssert.DoesNotThrow(() => attribute.OnActionExecuting(context));
+            Assert.IsType<BadRequestObjectResult>(context.Result);
+        }
+
+        [Fact]
+        public void OnActionExecuting_LoggingEnabled_WarningLevelDisabled_WritesNothing()
+        {
+            // Arrange
+            var loggerProvider = new CapturingLoggerProvider();
+            var attribute = new EnableQueryAttribute { EnableQueryValidationErrorLogging = true };
+            var context = CreateQueryValidationActionExecutingContext(
+                "?$select=NoSuchProperty",
+                BuildLoggerServices(loggerProvider, minimumLevel: LogLevel.Error));
+
+            // Act
+            attribute.OnActionExecuting(context);
+
+            // Assert
+            Assert.IsType<BadRequestObjectResult>(context.Result);
+            Assert.Empty(loggerProvider.Entries);
+        }
+
+        [Fact]
+        public void OnActionExecuting_LoggingEnabled_CustomLogLevel_WritesAtConfiguredLevel()
+        {
+            // Arrange
+            var loggerProvider = new CapturingLoggerProvider();
+            var attribute = new EnableQueryAttribute { EnableQueryValidationErrorLogging = true };
+            var context = CreateQueryValidationActionExecutingContext(
+                "?$select=NoSuchProperty",
+                BuildLoggerServicesWithGlobalOption(loggerProvider, globalEnable: false, globalLevel: LogLevel.Error));
+
+            // Act
+            attribute.OnActionExecuting(context);
+
+            // Assert
+            Assert.IsType<BadRequestObjectResult>(context.Result);
+            var entry = Assert.Single(loggerProvider.Entries);
+            Assert.Equal(LogLevel.Error, entry.Level);
+        }
+
+        [Fact]
+        public void OnActionExecuting_LoggingEnabled_InformationLevel_WritesAtInformation()
+        {
+            // Arrange
+            var loggerProvider = new CapturingLoggerProvider();
+            var attribute = new EnableQueryAttribute { EnableQueryValidationErrorLogging = true };
+            var context = CreateQueryValidationActionExecutingContext(
+                "?$select=NoSuchProperty",
+                BuildLoggerServicesWithGlobalOption(loggerProvider, globalEnable: false, globalLevel: LogLevel.Information));
+
+            // Act
+            attribute.OnActionExecuting(context);
+
+            // Assert
+            var entry = Assert.Single(loggerProvider.Entries);
+            Assert.Equal(LogLevel.Information, entry.Level);
+        }
+
+        [Fact]
+        public void OnActionExecuting_GlobalEnabled_UsesGlobalLogLevel()
+        {
+            // Arrange
+            var loggerProvider = new CapturingLoggerProvider();
+            var attribute = new EnableQueryAttribute();
+            var context = CreateQueryValidationActionExecutingContext(
+                "?$select=NoSuchProperty",
+                BuildLoggerServicesWithGlobalOption(loggerProvider, globalEnable: true, globalLevel: LogLevel.Debug));
+
+            // Act
+            attribute.OnActionExecuting(context);
+
+            // Assert
+            var entry = Assert.Single(loggerProvider.Entries);
+            Assert.Equal(LogLevel.Debug, entry.Level);
+        }
+
+        [Fact]
+        public void OnActionExecuting_LoggingEnabled_CustomLevelDisabled_WritesNothing()
+        {
+            // Arrange
+            var loggerProvider = new CapturingLoggerProvider();
+            var attribute = new EnableQueryAttribute { EnableQueryValidationErrorLogging = true };
+            var context = CreateQueryValidationActionExecutingContext(
+                "?$select=NoSuchProperty",
+                BuildLoggerServicesWithGlobalOption(loggerProvider, globalEnable: false, globalLevel: LogLevel.Information, minimumLevel: LogLevel.Warning));
+
+            // Act
+            attribute.OnActionExecuting(context);
+
+            // Assert
+            Assert.IsType<BadRequestObjectResult>(context.Result);
+            Assert.Empty(loggerProvider.Entries);
+        }
+
+        [Fact]
+        public void OnActionExecuting_LoggingEnabled_LoggerThrows_ResponseUnchanged()
+        {
+            // Arrange
+            var throwingProvider = new ThrowingLoggerProvider(typeof(EnableQueryAttribute).FullName);
+            var attribute = new EnableQueryAttribute { EnableQueryValidationErrorLogging = true };
+            var context = CreateQueryValidationActionExecutingContext(
+                "?$select=NoSuchProperty",
+                BuildThrowingLoggerServices(throwingProvider));
+
+            // Act & Assert
+            ExceptionAssert.DoesNotThrow(() => attribute.OnActionExecuting(context));
+            Assert.IsType<BadRequestObjectResult>(context.Result);
+        }
+
+        [Fact]
+        public void OnActionExecuted_LoggingEnabled_PostActionValidationFailure_WritesDiagnostic()
+        {
+            // Arrange
+            var loggerProvider = new CapturingLoggerProvider();
+            var attribute = new EnableQueryAttribute { EnableQueryValidationErrorLogging = true };
+
+            // Seed the per-request state, but clear the OData path so the pre-action validation is skipped and the
+            // query is instead validated after the action runs - the path taken for IActionResult/SingleResult
+            // actions whose element type is only known once the result is produced.
+            var executingContext = CreateQueryValidationActionExecutingContext("?$select=NoSuchProperty", BuildLoggerServices(loggerProvider));
+            executingContext.HttpContext.Request.ODataFeature().Path = null;
+            attribute.OnActionExecuting(executingContext);
+            Assert.Null(executingContext.Result);
+            Assert.Empty(loggerProvider.Entries);
+
+            // The controller result whose element type (Customer) becomes known only now drives post-action
+            // validation. The element type must match the model registered on the request (the logging model is
+            // built from the TestModels Customer), so the query is validated against that type instead of falling
+            // back to a model built from the action descriptor.
+            HttpContext httpContext = executingContext.HttpContext;
+            ActionDescriptor actionDescriptor = ControllerDescriptorFactory
+                .Create(RoutingConfigurationFactory.Create(), "CustomersController", typeof(CustomersController))
+                .First(descriptor => descriptor.ActionName.StartsWith("Get", StringComparison.OrdinalIgnoreCase));
+            var customers = new List<Microsoft.AspNet.OData.Test.Builder.TestModels.Customer>
+            {
+                new Microsoft.AspNet.OData.Test.Builder.TestModels.Customer { Name = "Anne" }
+            }.AsQueryable();
+            var executedContext = new ActionExecutedContext(
+                new ActionContext(httpContext, new RouteData(), actionDescriptor),
+                new List<IFilterMetadata>(),
+                new CustomersController())
+            {
+                Result = new ObjectResult(customers) { StatusCode = 200 }
+            };
+
+            // Act
+            attribute.OnActionExecuted(executedContext);
+
+            // Assert
+            Assert.IsType<BadRequestObjectResult>(executedContext.Result);
+            var entry = Assert.Single(loggerProvider.Entries);
+            Assert.Equal(LogLevel.Warning, entry.Level);
+            Assert.Equal(typeof(EnableQueryAttribute).FullName, entry.Category);
+            Assert.Contains("Customer", entry.GetFieldValue("QueryType"));
+            Assert.Equal("$select=NoSuchProperty", entry.GetFieldValue("QueryOptions"));
+            Assert.Contains("NoSuchProperty", entry.GetFieldValue("Reason"));
+            Assert.NotNull(entry.Exception);
+        }
+
+        private static IEdmModel GetLoggingCustomerModel()
+        {
+            return new ODataModelBuilder().Add_Customers_EntitySet().GetEdmModel();
+        }
+
+        private static IEdmModel GetLoggingCustomerOrdersModel()
+        {
+            // Customer.Orders is a bound navigation to the Orders set, so the outer clause binds and only the nested
+            // clause (a $select/$filter on Order, or an any/all lambda over Orders) fails validation.
+            return new ODataModelBuilder()
+                .Add_Order_EntityType()
+                .Add_Customers_EntitySet()
+                .Add_Orders_EntitySet()
+                .Add_CustomerOrders_Relationship()
+                .Add_CustomerOrders_Binding()
+                .GetEdmModel();
+        }
+
+#if NETCOREAPP2_1
+        // Builds a multi-segment OData path (Customers(1)/Orders[(5)]) for endpoint-template reconstruction tests.
+        private static ODataPath BuildCustomersOrdersPath(IEdmModel model, bool includeOrderKey)
+        {
+            var customers = model.EntityContainer.FindEntitySet("Customers");
+            var orders = model.EntityContainer.FindEntitySet("Orders");
+            var ordersProperty = customers.EntityType().FindProperty("Orders") as IEdmNavigationProperty;
+
+            var entitySetSegment = new Microsoft.OData.UriParser.EntitySetSegment(customers);
+            var customerKeySegment = new Microsoft.OData.UriParser.KeySegment(
+                new[] { new KeyValuePair<string, object>("CustomerId", 1) },
+                customers.EntityType(),
+                customers);
+            var ordersSegment = new Microsoft.OData.UriParser.NavigationPropertySegment(ordersProperty, orders);
+
+            if (includeOrderKey)
+            {
+                var orderKeySegment = new Microsoft.OData.UriParser.KeySegment(
+                    new[] { new KeyValuePair<string, object>("OrderId", 5) },
+                    orders.EntityType(),
+                    orders);
+                return new ODataPath(entitySetSegment, customerKeySegment, ordersSegment, orderKeySegment);
+            }
+
+            return new ODataPath(entitySetSegment, customerKeySegment, ordersSegment);
+        }
+#endif
+
+        private static IServiceProvider BuildLoggerServices(CapturingLoggerProvider loggerProvider)
+        {
+            return BuildLoggerServices(loggerProvider, LogLevel.Trace, null);
+        }
+
+        private static IServiceProvider BuildLoggerServices(CapturingLoggerProvider loggerProvider, LogLevel minimumLevel)
+        {
+            return BuildLoggerServices(loggerProvider, minimumLevel, null);
+        }
+
+        private static IServiceProvider BuildLoggerServices(CapturingLoggerProvider loggerProvider, LogLevel minimumLevel, ODataOptions odataOptions)
+        {
+            var services = new ServiceCollection();
+            services.AddLogging(builder =>
+            {
+                builder.SetMinimumLevel(minimumLevel);
+                builder.AddProvider(loggerProvider);
+            });
+            services.AddSingleton(odataOptions ?? new ODataOptions());
+            return services.BuildServiceProvider();
+        }
+
+        private static IServiceProvider BuildLoggerServicesWithGlobalOption(CapturingLoggerProvider loggerProvider, bool globalEnable, LogLevel? globalLevel = null, LogLevel minimumLevel = LogLevel.Trace)
+        {
+            var odataOptions = new ODataOptions
+            {
+                EnableQueryValidationErrorLogging = globalEnable
+            };
+            if (globalLevel.HasValue)
+            {
+                odataOptions.QueryValidationErrorLogLevel = globalLevel.Value;
+            }
+
+            return BuildLoggerServices(loggerProvider, minimumLevel, odataOptions);
+        }
+
+        private static IServiceProvider BuildThrowingLoggerServices(ThrowingLoggerProvider loggerProvider)
+        {
+            var services = new ServiceCollection();
+            services.AddLogging(builder =>
+            {
+                builder.SetMinimumLevel(LogLevel.Trace);
+                builder.AddProvider(loggerProvider);
+            });
+            services.AddSingleton(new ODataOptions());
+            return services.BuildServiceProvider();
+        }
+
+#if NETCOREAPP2_1
+        private ActionExecutingContext CreateQueryValidationActionExecutingContext(string queryString, IServiceProvider requestServices, bool routedEndpoint = false, bool collectionEndpoint = false, IEdmModel model = null)
+#else
+        private ActionExecutingContext CreateQueryValidationActionExecutingContext(string queryString, IServiceProvider requestServices, Endpoint routeEndpoint = null, bool collectionEndpoint = false, IEdmModel model = null)
+#endif
+        {
+            var routeName = "querylogging";
+            model = model ?? GetLoggingCustomerModel();
+
+            var customers = model.EntityContainer.FindEntitySet("Customers");
+            var path = new ODataPath(new Microsoft.OData.UriParser.EntitySetSegment(customers));
+
+            var request = RequestFactory.CreateFromModel(model, "http://localhost/odata/Customers" + queryString, routeName, path);
+
+            // Enable $select and $expand so the requested clause is bound during validation (which then reports the
+            // unknown property) instead of being rejected outright as a disallowed option.
+            var configuration = RoutingConfigurationFactory.Create();
+            configuration.Select().Expand().Filter().OrderBy().Count();
+            IServiceProvider odataContainer = GetServiceProvider(configuration, model, routeName);
+            request.ODataFeature().RequestContainer = odataContainer;
+
+            HttpContext httpContext = request.HttpContext;
+            httpContext.RequestServices = requestServices;
+
+#if !NETCOREAPP2_1
+            if (routeEndpoint != null)
+            {
+                httpContext.SetEndpoint(routeEndpoint);
+            }
+            else if (collectionEndpoint)
+            {
+                // Collection endpoint (no key). Attach a routed endpoint whose route pattern is the collection
+                // template so the diagnostic reports "odata/Customers" for a query over the Customers collection.
+                httpContext.SetEndpoint(new RouteEndpoint(
+                    ctx => System.Threading.Tasks.Task.CompletedTask,
+                    Microsoft.AspNetCore.Routing.Patterns.RoutePatternFactory.Parse("odata/Customers"),
+                    order: 0,
+                    metadata: EndpointMetadataCollection.Empty,
+                    displayName: "Customers"));
+            }
+#else
+            if (routedEndpoint)
+            {
+                // Targets that predate endpoint routing expose the matched OData endpoint through the request's
+                // ODataFeature rather than an Endpoint object. Populate the parsed path (entity set + key) and the
+                // route prefix the way the classic OData router does, so the diagnostic reconstructs the same
+                // "odata/Customers({key})" template produced from the endpoint route pattern on later targets.
+                var keySegment = new Microsoft.OData.UriParser.KeySegment(
+                    new[] { new KeyValuePair<string, object>("CustomerId", 1) },
+                    customers.EntityType(),
+                    customers);
+                request.ODataFeature().Path = new ODataPath(new Microsoft.OData.UriParser.EntitySetSegment(customers), keySegment);
+                request.ODataFeature().RoutePrefix = "odata";
+            }
+            else if (collectionEndpoint)
+            {
+                // Collection endpoint (no key). Keep the entity-set (keyless) path and just set the route prefix, so
+                // the diagnostic reconstructs the collection template "odata/Customers" for the same request.
+                request.ODataFeature().RoutePrefix = "odata";
+            }
+#endif
+
+            var actionContext = new ActionContext(httpContext, new RouteData(), new ActionDescriptor());
+            return new ActionExecutingContext(actionContext, new List<IFilterMetadata>(), new Dictionary<string, object>(), controller: new object());
+        }
+
+        #endregion
 #endif
 
 #if !NETCORE // TODO #939: Enable these test on AspNetCore.

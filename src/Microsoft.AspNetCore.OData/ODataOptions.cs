@@ -7,6 +7,7 @@
 
 using Microsoft.AspNet.OData.Batch;
 using Microsoft.AspNet.OData.Common;
+using Microsoft.Extensions.Logging;
 using Microsoft.OData;
 
 namespace Microsoft.AspNet.OData
@@ -47,6 +48,20 @@ namespace Microsoft.AspNet.OData
             get => _messageSizeOptions.MaxReceivedMessageSize;
             set => _messageSizeOptions.MaxReceivedMessageSize = value;
         }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether diagnostic details are logged when a query fails validation,
+        /// for actions annotated with <see cref="EnableQueryAttribute"/>. Provides the default for every such
+        /// action; an individual <see cref="EnableQueryAttribute.EnableQueryValidationErrorLogging"/> overrides it.
+        /// The default value is <c>false</c>.
+        /// </summary>
+        public bool EnableQueryValidationErrorLogging { get; set; }
+
+        /// <summary>
+        /// Gets or sets the <see cref="LogLevel"/> at which query validation diagnostics are written when
+        /// <see cref="EnableQueryValidationErrorLogging"/> is enabled. The default value is <see cref="LogLevel.Warning"/>.
+        /// </summary>
+        public LogLevel QueryValidationErrorLogLevel { get; set; } = LogLevel.Warning;
 
         private readonly ODataMessageSizeOptions _messageSizeOptions = new ODataMessageSizeOptions();
     }
